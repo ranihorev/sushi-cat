@@ -5,3 +5,4 @@ dev-dist
 .vercel
 *.local
 .env*.local
+.gstack/

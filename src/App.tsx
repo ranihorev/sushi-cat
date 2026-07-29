@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DECORATIONS } from './components/Restaurant';
-import { UI_CLIPS, audio, clipsForLetter } from './game/audio';
+import { CAT_CLIPS, UI_CLIPS, audio, clipsForLetter } from './game/audio';
 import type { Letter } from './game/letters';
 import { ALL_LETTERS } from './game/letters';
 import { loadProfile, maybeUnlockBatch, noteSession, saveProfile } from './game/store';
@@ -50,7 +50,9 @@ export default function App() {
     void audio.preload([
       ...profile.activeSet.flatMap(clipsForLetter),
       ...UI_CLIPS,
+      ...CAT_CLIPS,
     ]);
+    void audio.oneShot('cat/greet', 0.9);
     audio.preloadIdle(ALL_LETTERS.flatMap(clipsForLetter));
     update(noteSession);
     setEaten([]);

@@ -23,7 +23,33 @@ teaches the wrong thing.
 
 ```bash
 export ELEVENLABS_API_KEY=sk_...
-npm run audio                 # ~115 clips, a few minutes
+npm run audio                 # the 114 voice clips, a few minutes
+npm run audio:cat             # the cat's meows, purrs and chirps
+npm run audio:process         # REQUIRED — trims and levels them (needs ffmpeg)
+```
+
+`audio:process` is not optional. Raw TTS gets two things wrong for phonics and
+it fixes both:
+
+- **Trailing schwa.** Asked for `/p/` the model says "puh". Measured across the
+  raw clips, every stop consonant ran 0.33–1.2s — all vowel. The processor
+  keeps the burst and cuts the vowel off, which is why the generator now asks
+  for `P AH0`: a released burst reads more cleanly than a bare one, and the
+  release gets trimmed away anyway.
+- **Loudness.** The raw clips varied about 10x. Everything is levelled to the
+  same perceived loudness, with soft limiting so a short `/k/` burst can reach
+  the same level as a held `/mmm/`.
+
+Two checks, neither a substitute for listening:
+
+```bash
+npm run audio:measure   # clip shapes — flags stops that still sound like "puh"
+npm run audio:verify    # transcribes prompts back (key needs speech_to_text)
+```
+
+Other generator options:
+
+```bash
 npm run audio -- --force      # regenerate everything
 npm run audio -- S M T        # just these letters
 ```
@@ -43,8 +69,13 @@ supports them.
 A parent's own voice beats any TTS for engagement. To swap in recordings, drop
 files at the same paths (`public/audio/prompt/M.mp3` etc.) and skip the script.
 
-Sound effects (chomp, chime, puzzled) are synthesized in the browser with Web
-Audio — no files, works offline, nothing to generate.
+The cat's own voice — meows, chirps, a purr, a yawn, chewing — comes from
+`npm run audio:cat`. That needs the `sound_generation` permission on the API
+key. It degrades quietly: if the clips aren't there the game plays exactly as
+before, just without the cat reacting out loud.
+
+The interface sounds (chomp, chime, puzzled) are synthesized in the browser with
+Web Audio — no files, works offline, nothing to generate.
 
 ## Deploy to the tablet
 
@@ -112,7 +143,11 @@ src/
   components/    Cat, Sushi, Restaurant, Plate
   screens/       Title, Play, Rest, Parent
 scripts/
-  generate-audio.mjs
+  generate-audio.mjs       the 114 letter clips
+  generate-cat-sounds.mjs  meows, purr, yawn, chewing
+  process-audio.mjs        trims schwas off stops, levels everything
+  measure-audio.mjs        checks clip shape without needing the API
+  verify-audio.mjs         transcribes prompts back as a smoke test
 ```
 
 The cat is driven only by `{ fullness, mood }`. Swapping the SVG for illustrated

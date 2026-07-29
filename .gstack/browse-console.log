@@ -1,101 +1,31 @@
-[2026-07-29T01:30:27.649Z] [debug] [vite] connecting...
-[2026-07-29T01:30:27.675Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:30:27.713Z] [debug] [vite] connected.
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/screens/Parent.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/components/Plate.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/components/Sushi.tsx
-[2026-07-29T01:31:34.555Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:31:59.791Z] [debug] [vite] invalidate /src/components/Restaurant.tsx: Could not Fast Refresh (new export)
-[2026-07-29T01:31:59.791Z] [debug] [vite] hot updated: /src/components/Restaurant.tsx
-[2026-07-29T01:31:59.791Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:31:59.800Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:31:59.800Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:31:59.800Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:31:59.800Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:32:08.512Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:32:08.512Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:32:25.841Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:32:25.841Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:32:25.895Z] [warning] %s
-
-%s
- An error occurred in the <Play> component. Consider adding an error boundary to your tree to customize error handling behavior.
-Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
-[2026-07-29T01:32:29.061Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:32:29.061Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:32:33.200Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:32:33.200Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:32:36.077Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:32:36.077Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:32:50.311Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:32:50.311Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:03.041Z] [error] Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-[2026-07-29T01:33:03.050Z] [error] [vite] Failed to reload /src/screens/Rest.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
-[2026-07-29T01:33:03.060Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:33:03.060Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:12.848Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:33:12.848Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:17.329Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:33:17.329Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:26.967Z] [debug] [vite] connecting...
-[2026-07-29T01:33:27.053Z] [debug] [vite] connected.
-[2026-07-29T01:33:27.056Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:33:51.015Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:33:51.015Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:56.434Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:33:56.434Z] [debug] [vite] hot updated: /src/screens/Parent.tsx
-[2026-07-29T01:33:56.434Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:33:56.434Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:33:59.834Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/screens/Parent.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/components/Plate.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/components/Sushi.tsx
-[2026-07-29T01:33:59.835Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:34:14.718Z] [debug] [vite] connecting...
-[2026-07-29T01:34:14.796Z] [debug] [vite] connected.
-[2026-07-29T01:34:14.796Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:35:27.193Z] [debug] [vite] connecting...
-[2026-07-29T01:35:27.274Z] [debug] [vite] connected.
-[2026-07-29T01:35:27.284Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:37:31.502Z] [debug] [vite] invalidate /src/components/Restaurant.tsx: Could not Fast Refresh ("DECORATIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
-[2026-07-29T01:37:31.503Z] [debug] [vite] hot updated: /src/components/Restaurant.tsx
-[2026-07-29T01:37:31.503Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:37:31.523Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:37:31.523Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:37:31.523Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:37:31.526Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:37:42.054Z] [debug] [vite] connecting...
-[2026-07-29T01:37:42.131Z] [debug] [vite] connected.
-[2026-07-29T01:37:42.131Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:38:26.675Z] [debug] [vite] invalidate /src/components/Restaurant.tsx: Could not Fast Refresh ("DECORATIONS" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
-[2026-07-29T01:38:26.675Z] [debug] [vite] hot updated: /src/components/Restaurant.tsx
-[2026-07-29T01:38:26.675Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:38:26.684Z] [debug] [vite] hot updated: /src/App.tsx
-[2026-07-29T01:38:26.684Z] [debug] [vite] hot updated: /src/screens/Rest.tsx
-[2026-07-29T01:38:26.684Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:38:26.684Z] [debug] [vite] hot updated: /src/screens/Title.tsx
-[2026-07-29T01:38:40.069Z] [debug] [vite] connecting...
-[2026-07-29T01:38:40.153Z] [debug] [vite] connected.
-[2026-07-29T01:38:40.153Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:38:58.823Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:38:58.823Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:39:07.422Z] [debug] [vite] hot updated: /src/index.css
-[2026-07-29T01:39:07.422Z] [debug] [vite] hot updated: /src/screens/Play.tsx
-[2026-07-29T01:39:21.839Z] [debug] [vite] connecting...
-[2026-07-29T01:39:21.919Z] [debug] [vite] connected.
-[2026-07-29T01:39:21.921Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:40:03.574Z] [debug] [vite] connecting...
-[2026-07-29T01:40:03.654Z] [debug] [vite] connected.
-[2026-07-29T01:40:03.662Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T01:40:22.752Z] [debug] [vite] connecting...
-[2026-07-29T01:40:22.755Z] [debug] [vite] connected.
-[2026-07-29T01:40:22.759Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[2026-07-29T02:00:02.450Z] [log] [vite] server connection lost. Polling for restart...
-[2026-07-29T02:00:02.734Z] [debug] [vite] connecting...
-[2026-07-29T02:00:02.763Z] [debug] [vite] connected.
-[2026-07-29T02:00:02.765Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:34.449Z] [debug] [vite] connecting...
+[2026-07-29T02:46:34.506Z] [debug] [vite] connected.
+[2026-07-29T02:46:34.596Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:34.809Z] [debug] [vite] connecting...
+[2026-07-29T02:46:34.834Z] [debug] [vite] connected.
+[2026-07-29T02:46:34.845Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:35.985Z] [debug] [vite] connecting...
+[2026-07-29T02:46:35.988Z] [debug] [vite] connected.
+[2026-07-29T02:46:35.991Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:37.893Z] [debug] [vite] connecting...
+[2026-07-29T02:46:37.895Z] [debug] [vite] connected.
+[2026-07-29T02:46:37.903Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:40.223Z] [debug] [vite] connecting...
+[2026-07-29T02:46:40.224Z] [debug] [vite] connected.
+[2026-07-29T02:46:40.227Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:40.557Z] [debug] [vite] connecting...
+[2026-07-29T02:46:40.575Z] [debug] [vite] connected.
+[2026-07-29T02:46:40.577Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:46:57.875Z] [debug] [vite] connecting...
+[2026-07-29T02:46:57.946Z] [debug] [vite] connected.
+[2026-07-29T02:46:57.949Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:47:01.210Z] [debug] [vite] connecting...
+[2026-07-29T02:47:01.299Z] [debug] [vite] connected.
+[2026-07-29T02:47:01.304Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:47:01.343Z] [debug] [vite] connecting...
+[2026-07-29T02:47:01.415Z] [debug] [vite] connected.
+[2026-07-29T02:47:01.416Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:47:15.696Z] [debug] [vite] connecting...
+[2026-07-29T02:47:15.705Z] [debug] [vite] connected.
+[2026-07-29T02:47:15.708Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-29T02:47:27.261Z] [log] [vite] server connection lost. Polling for restart...

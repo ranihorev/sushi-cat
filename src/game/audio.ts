@@ -118,6 +118,16 @@ class AudioEngine {
     });
   }
 
+  /**
+   * Play a clip over whatever else is going on, without cancelling it. The
+   * cat's reactions layer on top of speech rather than interrupting it.
+   */
+  async oneShot(clip: Clip, gain = 1) {
+    this.unlock();
+    const buf = await this.load(clip);
+    if (buf) await this.playBuffer(buf, gain);
+  }
+
   /** Speak a sequence of voice clips with gaps. Later calls cancel earlier ones. */
   async speak(items: Array<Clip | number>, fallback?: () => void): Promise<void> {
     this.unlock();
@@ -227,9 +237,11 @@ export const audio = new AudioEngine();
 /** A prompt is a small script: clip names interleaved with pauses in ms. */
 export const promptClips = (round: Round): Array<Clip | number> => {
   const L = round.target;
+  // the prompt clip already contains the sound twice with a gap — see
+  // scripts/process-audio.mjs, which builds it that way deliberately
   if (round.kind === 'word') return [`word/${L}`, 280, `prompt/${L}`];
   if (round.kind === 'name') return [`name/${L}`];
-  return [`prompt/${L}`, 420, `prompt/${L}`];
+  return [`prompt/${L}`];
 };
 
 export const confirmClip = (l: Letter): Clip => `confirm/${l}`;
@@ -241,6 +253,28 @@ export const clipsForLetter = (l: Letter): Clip[] => [
   `confirm/${l}`,
   `word/${l}`,
   `name/${l}`,
+];
+
+/* The cat's own voice. It carries the feedback he actually reads — a delighted
+   meow or a puzzled mrrp lands long before any of the words do. */
+const CAT_VARIANTS = {
+  happy: ['cat/meow-happy-1', 'cat/meow-happy-2'],
+  excited: ['cat/trill-1', 'cat/trill-2'],
+  curious: ['cat/curious-1', 'cat/curious-2'],
+} as const;
+
+const pickOne = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+export const catSound = (kind: keyof typeof CAT_VARIANTS): Clip => pickOne(CAT_VARIANTS[kind]);
+
+export const CAT_CLIPS: Clip[] = [
+  ...CAT_VARIANTS.happy,
+  ...CAT_VARIANTS.excited,
+  ...CAT_VARIANTS.curious,
+  'cat/purr',
+  'cat/nom',
+  'cat/yawn',
+  'cat/greet',
 ];
 
 export const UI_CLIPS: Clip[] = [

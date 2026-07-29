@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { audio, clipsForLetter } from '../game/audio';
+import { CAT_CLIPS, UI_CLIPS, audio, clipsForLetter } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { ALL_LETTERS, LETTERS } from '../game/letters';
 import {
@@ -225,7 +225,13 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
         <section className="flex flex-wrap gap-3 border-t border-white/10 pt-5">
           <button
             type="button"
-            onPointerDown={() => void audio.preload(ALL_LETTERS.flatMap(clipsForLetter))}
+            onPointerDown={() =>
+              void audio.preload([
+                ...ALL_LETTERS.flatMap(clipsForLetter),
+                ...UI_CLIPS,
+                ...CAT_CLIPS,
+              ])
+            }
             className="rounded-lg bg-white/10 px-4 py-2 text-sm font-bold"
           >
             Cache all audio for offline

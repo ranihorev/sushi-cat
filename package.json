@@ -8,7 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "audio": "node scripts/generate-audio.mjs"
+    "audio": "node scripts/generate-audio.mjs",
+    "audio:cat": "node scripts/generate-cat-sounds.mjs",
+    "audio:process": "node scripts/process-audio.mjs",
+    "audio:verify": "node scripts/verify-audio.mjs",
+    "audio:measure": "node scripts/measure-audio.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",

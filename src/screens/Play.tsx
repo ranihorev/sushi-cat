@@ -5,6 +5,7 @@ import { Counter, Restaurant } from '../components/Restaurant';
 import { Sushi, type PieceState } from '../components/Sushi';
 import {
   audio,
+  catSound,
   confirmClip,
   fallbackPrompt,
   promptClips,
@@ -130,16 +131,22 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       aimAtCat(letter);
       setPieceState({ [letter]: 'flying' });
 
-      after(300, () => {
+      // he watches it come in, then eats it — two beats, not one
+      after(180, () => {
         audio.whoosh();
-        setMood('eating');
+        setMood('anticipate');
       });
-      after(760, () => audio.chomp());
+      after(720, () => {
+        setMood('eating');
+        audio.chomp();
+        void audio.oneShot('cat/nom', 0.8);
+      });
 
-      after(1050, () => {
+      after(1180, () => {
         const first = misses === 0;
         setMood('happy');
         audio.happy();
+        void audio.oneShot(catSound(streak >= 2 ? 'excited' : 'happy'), 0.85);
         void audio.speak([confirmClip(letter)], () =>
           sayFallback(`${LETTERS[letter].sound.replaceAll('/', '')}. ${letter}!`, 0.85),
         );
@@ -168,6 +175,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           if (nextEaten.length >= total) {
             setMood('asleep');
             audio.fanfare();
+            void audio.oneShot('cat/yawn', 0.9);
             after(700, () => onMealComplete(nextEaten));
             return;
           }
@@ -184,6 +192,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     setStreak(0);
     setMood('confused');
     audio.puzzled();
+    void audio.oneShot(catSound('curious'), 0.8);
     setPieceState({ [letter]: 'reject' });
     onProfileChange((p) => recordConfusion(p, round.target, letter));
 
