@@ -111,7 +111,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
       const dir = happy || eating || asleep ? -1 : 0.15;
       return (
         <path
-          d={`M ${cx - 9} 103 q 9 ${8 * dir} 18 0`}
+          d={`M ${cx - 9} 101 q 9 ${8 * dir} 18 0`}
           stroke={INK}
           strokeWidth="4"
           strokeLinecap="round"
@@ -123,23 +123,23 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
     const r = anticipating ? 1.18 : 1;
     return (
       <g>
-        <ellipse cx={cx + px} cy="102" rx={8.5 * r} ry={10 * r} fill={INK} />
-        <circle cx={cx + px + 3} cy={98} r={3 * r} fill="#fff" />
-        <circle cx={cx + px - 2.5} cy="105.5" r="1.5" fill="#fff" opacity="0.75" />
+        <ellipse cx={cx + px} cy="100" rx={8.5 * r} ry={10 * r} fill={INK} />
+        <circle cx={cx + px + 3} cy={96} r={3 * r} fill="#fff" />
+        <circle cx={cx + px - 2.5} cy="103.5" r="1.5" fill="#fff" opacity="0.75" />
       </g>
     );
   };
 
   const mouth = eating ? (
-    <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 126px' }}>
-      <ellipse cx="120" cy="129" rx={chewing ? 11 : 17} ry={chewing ? 9 : 15} fill="#7A2E33" />
-      <ellipse cx="120" cy={chewing ? 133 : 136} rx={chewing ? 7 : 10} ry={5} fill="#F4837E" />
+    <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 124px' }}>
+      <ellipse cx="120" cy="127" rx={chewing ? 11 : 17} ry={chewing ? 9 : 15} fill="#7A2E33" />
+      <ellipse cx="120" cy={chewing ? 131 : 134} rx={chewing ? 7 : 10} ry={5} fill="#F4837E" />
     </g>
   ) : anticipating ? (
-    <ellipse cx="120" cy="128" rx="11" ry="10" fill="#7A2E33" />
+    <ellipse cx="120" cy="126" rx="11" ry="10" fill="#7A2E33" />
   ) : confused ? (
     <path
-      d="M 110 128 q 5 -5 10 0 q 5 5 10 0"
+      d="M 110 126 q 5 -5 10 0 q 5 5 10 0"
       stroke={INK}
       strokeWidth="3"
       fill="none"
@@ -147,15 +147,15 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
     />
   ) : happy ? (
     <g>
-      <path d="M 106 124 q 14 16 28 0" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" />
-      <path d="M 111 130 q 9 8 18 0" fill="#F4837E" />
+      <path d="M 106 122 q 14 16 28 0" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" />
+      <path d="M 111 128 q 9 8 18 0" fill="#F4837E" />
     </g>
   ) : asleep ? (
-    <path d="M 114 126 q 6 5 12 0" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
+    <path d="M 114 124 q 6 5 12 0" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
   ) : (
     <g stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round">
-      <path d="M 108 124 q 6 7 12 0" />
-      <path d="M 120 124 q 6 7 12 0" />
+      <path d="M 108 123 q 6 7 12 0" />
+      <path d="M 120 123 q 6 7 12 0" />
     </g>
   );
 
@@ -176,6 +176,10 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
           <stop offset="0%" stopColor="#FFFDF7" />
           <stop offset="100%" stopColor={FUR} />
         </radialGradient>
+        <radialGradient id="chin" cx="50%" cy="50%" r="50%">
+          <stop offset="52%" stopColor="#000" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
         <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#2B4038" />
           <stop offset="50%" stopColor={NORI} />
@@ -194,92 +198,104 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
         }}
       >
         <g className={bodyClass}>
-          {/* tail */}
+          {/* tail — a tapered shape rather than a uniform stroke, so it reads
+              as part of the animal instead of a rope stuck to its side */}
           <path
             className={fidget === 'tail' ? 'cat-tail-flick' : 'cat-tail'}
-            d="M 178 172 q 42 -4 34 -46"
-            stroke={FUR}
-            strokeWidth="15"
-            strokeLinecap="round"
-            fill="none"
-            style={{ transformOrigin: '178px 172px' }}
+            d="M 166 186 C 202 192, 222 170, 212 136 C 209 125, 202 117, 198 122 C 205 134, 204 154, 187 164 C 179 169, 172 171, 166 172 Z"
+            fill={FUR}
+            style={{ transformOrigin: '168px 180px' }}
           />
 
-          {/* body */}
-          <ellipse cx="120" cy="160" rx="66" ry="45" fill="url(#fur)" />
-          <ellipse cx="120" cy="168" rx="44" ry="31" fill={FUR_SHADE} opacity="0.55" />
+          {/* body — a sitting silhouette, wide at the base and narrowing to the
+              shoulders. An ellipse read as a ball with a head stuck on it. */}
+          <path
+            d="M 62 196 C 55 189, 52 178, 52 164 C 52 136, 82 118, 120 118 C 158 118, 188 136, 188 164 C 188 178, 185 189, 178 196 Z"
+            fill="url(#fur)"
+          />
+          {/* chest marking */}
+          <ellipse cx="120" cy="170" rx="40" ry="27" fill={FUR_SHADE} opacity="0.38" />
+
           {/* front paws */}
-          <ellipse cx="93" cy="192" rx="18" ry="11" fill="url(#fur)" />
-          <ellipse cx="147" cy="192" rx="18" ry="11" fill="url(#fur)" />
+          <ellipse cx="93" cy="190" rx="18" ry="10" fill="url(#fur)" />
+          <ellipse cx="147" cy="190" rx="18" ry="10" fill="url(#fur)" />
           <g stroke={FUR_SHADE} strokeWidth="1.6" strokeLinecap="round">
-            <line x1="89" y1="188" x2="89" y2="195" />
-            <line x1="96" y1="187" x2="96" y2="195" />
-            <line x1="143" y1="188" x2="143" y2="195" />
-            <line x1="150" y1="187" x2="150" y2="195" />
+            <line x1="89" y1="185" x2="89" y2="193" />
+            <line x1="97" y1="184" x2="97" y2="193" />
+            <line x1="143" y1="185" x2="143" y2="193" />
+            <line x1="151" y1="184" x2="151" y2="193" />
           </g>
+
+          {/* the head casts onto the chest — without this the two shapes merge
+              into a single blob and the cat has no chin. Soft-edged: a plain
+              ellipse here reads as a grey smudge on the chest. */}
+          <ellipse cx="120" cy="118" rx="58" ry="48" fill="url(#chin)" />
 
           {/* head — tilts when puzzled, cranes forward when food is coming */}
           <g
             className={confused ? 'cat-tilt' : anticipating ? 'cat-crane' : undefined}
             style={{ transformOrigin: '120px 140px' }}
           >
-            {/* ears */}
+            {/* ears, behind the head so their bases disappear into it */}
             <g
               className={fidget === 'ear' ? 'cat-ear-twitch' : undefined}
-              style={{ transformOrigin: '74px 78px' }}
+              style={{ transformOrigin: '80px 76px' }}
             >
-              <path d="M 74 82 L 68 44 L 104 68 Z" fill="url(#fur)" />
-              <path d="M 81 78 L 78 55 L 97 68 Z" fill={BLUSH} />
+              <path d="M 78 80 L 63 26 L 112 58 Z" fill="url(#fur)" />
+              <path d="M 85 73 L 75 40 L 104 60 Z" fill={BLUSH} />
             </g>
-            <path d="M 166 82 L 172 44 L 136 68 Z" fill="url(#fur)" />
-            <path d="M 159 78 L 162 55 L 143 68 Z" fill={BLUSH} />
+            <path d="M 162 80 L 177 26 L 128 58 Z" fill="url(#fur)" />
+            <path d="M 155 73 L 165 40 L 136 60 Z" fill={BLUSH} />
 
             {/* head */}
-            <ellipse cx="120" cy="106" rx="57" ry="51" fill="url(#fur)" />
+            <ellipse cx="120" cy="98" rx="55" ry="49" fill="url(#fur)" />
 
-            {/* chef's headband */}
-            <path d="M 66 84 q 54 -18 108 0 l 0 12 q -54 -18 -108 0 Z" fill="url(#band)" />
-            <circle cx="120" cy="83" r="7" fill="#FF8A65" />
-            <path
-              d="M 66 88 q -12 4 -16 16 q 10 -6 18 -6"
-              fill={NORI}
-              className="cat-ribbon"
-              style={{ transformOrigin: '66px 88px' }}
-            />
+            {/* hachimaki — follows the curve of the forehead, knotted at the
+                side with two ends trailing off it */}
+            <path d="M 67 82 Q 120 61 173 82 L 173 94 Q 120 73 67 94 Z" fill="url(#band)" />
+            <circle cx="120" cy="74" r="6.5" fill="#FF8A65" />
+
 
             <Eye cx={100} />
             <Eye cx={140} />
 
             {/* blush — deepens when pleased or full */}
             <ellipse
-              cx="86"
-              cy="119"
-              rx="11"
-              ry="7"
+              cx="91"
+              cy="131"
+              rx="10.5"
+              ry="6.5"
               fill={BLUSH}
               opacity={happy || eating ? 0.78 : 0.42 + fullness * 0.25}
             />
             <ellipse
-              cx="154"
-              cy="119"
-              rx="11"
-              ry="7"
+              cx="149"
+              cy="131"
+              rx="10.5"
+              ry="6.5"
               fill={BLUSH}
               opacity={happy || eating ? 0.78 : 0.42 + fullness * 0.25}
             />
 
             {/* nose */}
-            <path d="M 115 117 L 125 117 L 120 123 Z" fill="#FF8A65" />
-            <line x1="120" y1="123" x2="120" y2="126" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+            <path d="M 114 114 L 126 114 L 120 121 Z" fill="#FF8A65" />
+            <line x1="120" y1="121" x2="120" y2="124" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
 
             {mouth}
 
-            {/* whiskers */}
-            <g stroke={INK} strokeWidth="2.2" strokeLinecap="round" opacity="0.55">
-              <line x1="66" y1="114" x2="38" y2="107" />
-              <line x1="66" y1="121" x2="38" y2="124" />
-              <line x1="174" y1="114" x2="202" y2="107" />
-              <line x1="174" y1="121" x2="202" y2="124" />
+            {/* whiskers — rooted at the muzzle and curved. Anchored out at the
+                edge of the head they read as loose scratches floating in air. */}
+            <g
+              stroke="#A2988A"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.75"
+            >
+              <path d="M 108 113 Q 86 109 54 103" />
+              <path d="M 108 120 Q 86 122 52 127" />
+              <path d="M 132 113 Q 154 109 186 103" />
+              <path d="M 132 120 Q 154 122 188 127" />
             </g>
           </g>
 
