@@ -1,0 +1,35 @@
+{"ts":"2026-07-29T01:30:27.235Z","cmd":"viewport","args":"1024x768","origin":"about:blank","durationMs":10,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:27.687Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":308,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:28.912Z","cmd":"screenshot","args":"--viewport /tmp/sc-title.png","origin":"http://localhost:5183/","durationMs":87,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:28.979Z","cmd":"console","args":"--errors","origin":"http://localhost:5183/","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:50.134Z","cmd":"js","args":"document.querySelector('button[aria-label=play]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))","origin":"http://localhost:5183/","durationMs":1643,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:52.523Z","cmd":"screenshot","args":"--viewport /tmp/sc-play.png","origin":"http://localhost:5183/","durationMs":113,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:30:52.575Z","cmd":"console","args":"--errors","origin":"http://localhost:5183/","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:33:27.066Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":275,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:33:28.213Z","cmd":"js","args":"document.querySelector('button[aria-label=play]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))","origin":"http://localhost:5183/","durationMs":58,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:33:30.407Z","cmd":"screenshot","args":"--viewport /tmp/sc-play2.png","origin":"http://localhost:5183/","durationMs":97,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:34:14.807Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":174,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:34:15.937Z","cmd":"eval","args":"/tmp/drive.js","origin":"http://localhost:5183/","durationMs":31,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:01.183Z","cmd":"js","args":"clearInterval(window.__drive); document.body.innerText.slice(0,120)","origin":"http://localhost:5183/","durationMs":3,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:01.363Z","cmd":"screenshot","args":"--viewport /tmp/sc-rest.png","origin":"http://localhost:5183/","durationMs":127,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:01.409Z","cmd":"console","args":"--errors","origin":"http://localhost:5183/","durationMs":5,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:09.098Z","cmd":"console","args":"","origin":"http://localhost:5183/","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:26.988Z","cmd":"js","args":"localStorage.clear()","origin":"http://localhost:5183/","durationMs":13,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:27.297Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":261,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:29.446Z","cmd":"console","args":"--clear","origin":"http://localhost:5183/","durationMs":5,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:35:29.595Z","cmd":"eval","args":"/tmp/drive.js","origin":"http://localhost:5183/","durationMs":104,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:36:11.905Z","cmd":"js","args":"clearInterval(window.__drive)","origin":"http://localhost:5183/","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:36:12.083Z","cmd":"screenshot","args":"--viewport /tmp/sc-rest.png","origin":"http://localhost:5183/","durationMs":132,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:36:12.126Z","cmd":"console","args":"--errors","origin":"http://localhost:5183/","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:37:41.842Z","cmd":"js","args":"localStorage.setItem('sushi-cat.profile.v2', JSON.stringify({version:2,name:'',letterStats:{},confusions:{},activeSet:['S','M','T','A','P','C'],level:2,mealsCompleted:6,decorations:['lantern-left','la…","origin":"http://localhost:5183/","durationMs":13,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:37:42.140Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":223,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:37:44.352Z","cmd":"screenshot","args":"--viewport /tmp/sc-title2.png","origin":"http://localhost:5183/","durationMs":115,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:38:39.804Z","cmd":"js","args":"localStorage.setItem('sushi-cat.profile.v2', JSON.stringify({version:2,name:'',letterStats:{S:{seen:6,correct:6,mastery:.95,lastSeenAt:5},M:{seen:6,correct:6,mastery:.95,lastSeenAt:5},T:{seen:6,correc…","origin":"http://localhost:5183/","durationMs":21,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:38:40.165Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":306,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:38:41.355Z","cmd":"js","args":"document.querySelector('button[aria-label=play]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))","origin":"http://localhost:5183/","durationMs":78,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:38:43.588Z","cmd":"screenshot","args":"--viewport /tmp/sc-l3.png","origin":"http://localhost:5183/","durationMs":118,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:39:21.644Z","cmd":"viewport","args":"768x1024","origin":"http://localhost:5183/","durationMs":75,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:39:21.936Z","cmd":"goto","args":"http://localhost:5183/","origin":"http://localhost:5183/","durationMs":235,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:39:23.108Z","cmd":"js","args":"document.querySelector('button[aria-label=play]').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))","origin":"http://localhost:5183/","durationMs":82,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:39:25.298Z","cmd":"screenshot","args":"--viewport /tmp/sc-portrait.png","origin":"http://localhost:5183/","durationMs":115,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-07-29T01:39:25.367Z","cmd":"viewport","args":"1024x768","origin":"http://localhost:5183/","durationMs":6,"status":"ok","hasCookies":false,"mode":"launched"}

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Audio check — Sushi Cat</title>
+    <style>
+      :root { color-scheme: dark }
+      body {
+        margin: 0; padding: 24px;
+        font: 15px/1.4 ui-rounded, system-ui, sans-serif;
+        background: #0a2426; color: #fffbf2;
+      }
+      h1 { margin: 0 0 4px; font-size: 22px }
+      p.sub { margin: 0 0 20px; color: #ffffff7a }
+      table { border-collapse: collapse; width: 100%; max-width: 900px }
+      th { text-align: left; font-size: 12px; text-transform: uppercase; color: #ffffff66; padding: 6px 8px }
+      td { padding: 5px 8px; border-top: 1px solid #ffffff14 }
+      .L { font-weight: 800; font-size: 20px; width: 40px }
+      button {
+        font: inherit; font-weight: 700; cursor: pointer;
+        background: #ffffff1a; color: inherit; border: 0;
+        border-radius: 8px; padding: 7px 12px; min-width: 108px; text-align: left;
+      }
+      button:hover { background: #ffffff2e }
+      button.missing { opacity: .35; cursor: not-allowed }
+      button.playing { background: #f7c744; color: #16302b }
+      .bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap }
+      .bar button { min-width: 0 }
+      code { background: #ffffff14; padding: 2px 6px; border-radius: 5px }
+    </style>
+  </head>
+  <body>
+    <h1>Audio check</h1>
+    <p class="sub">
+      Listen to every clip before handing the tablet over. A prompt should be the
+      <b>sound</b> — /mmm/, not "em" — and should not end in "uh".
+      Bad ones: fix <code>arpa</code> in <code>scripts/generate-audio.mjs</code>, then
+      <code>npm run audio -- --force M</code>.
+    </p>
+
+    <div class="bar">
+      <button onclick="playAll('prompt')">▶︎ all prompts</button>
+      <button onclick="playAll('confirm')">▶︎ all confirms</button>
+      <button onclick="stopAll()">■ stop</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th></th><th>prompt</th><th>confirm</th><th>word</th><th>name</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <h1 style="margin-top: 32px">Other</h1>
+    <div class="bar" id="misc"></div>
+
+    <script>
+      const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+      const KINDS = ['prompt', 'confirm', 'word', 'name'];
+      const MISC = [
+        'praise/1', 'praise/2', 'praise/3', 'praise/4', 'praise/5', 'praise/6',
+        'ui/lets-eat', 'ui/all-done', 'ui/try-again', 'ui/this-one',
+      ];
+
+      let current = null;
+      let queue = [];
+
+      function stopAll() {
+        queue = [];
+        if (current) { current.pause(); current = null; }
+        document.querySelectorAll('.playing').forEach((b) => b.classList.remove('playing'));
+      }
+
+      function play(path, btn) {
+        stopAll();
+        const a = new Audio(`audio/${path}.mp3`);
+        current = a;
+        btn?.classList.add('playing');
+        a.onended = a.onerror = () => {
+          btn?.classList.remove('playing');
+          if (queue.length) { const next = queue.shift(); play(next.path, next.btn); }
+        };
+        a.play().catch(() => btn?.classList.remove('playing'));
+      }
+
+      function playAll(kind) {
+        stopAll();
+        const items = LETTERS.map((L) => ({
+          path: `${kind}/${L}`,
+          btn: document.getElementById(`${kind}-${L}`),
+        })).filter((i) => i.btn && !i.btn.classList.contains('missing'));
+        if (!items.length) return;
+        queue = items.slice(1);
+        play(items[0].path, items[0].btn);
+      }
+
+      function cell(kind, L) {
+        const id = `${kind}-${L}`;
+        return `<td><button id="${id}" onclick="play('${kind}/${L}', this)">${kind}</button></td>`;
+      }
+
+      document.getElementById('rows').innerHTML = LETTERS.map(
+        (L) => `<tr><td class="L">${L}</td>${KINDS.map((k) => cell(k, L)).join('')}</tr>`,
+      ).join('');
+
+      document.getElementById('misc').innerHTML = MISC.map(
+        (p) => `<button id="m-${p.replace('/', '-')}" onclick="play('${p}', this)">${p}</button>`,
+      ).join('');
+
+      // grey out anything that hasn't been generated yet
+      const check = (path, id) =>
+        fetch(`audio/${path}.mp3`, { method: 'HEAD' }).then(
+          (r) => { if (!r.ok) document.getElementById(id)?.classList.add('missing'); },
+          () => document.getElementById(id)?.classList.add('missing'),
+        );
+
+      Promise.all([
+        ...LETTERS.flatMap((L) => KINDS.map((k) => check(`${k}/${L}`, `${k}-${L}`))),
+        ...MISC.map((p) => check(p, `m-${p.replace('/', '-')}`)),
+      ]);
+    </script>
+  </body>
+</html>
