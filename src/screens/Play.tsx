@@ -52,18 +52,48 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
   const profileRef = useRef(profile);
   profileRef.current = profile;
 
+  const alive = useRef(true);
+
+  /* Feeding is a drag, not a tap. Carrying the piece to the cat is a more
+     deliberate act than tapping — it makes him commit to a choice rather than
+     batting at whatever is nearest. */
+  const grabRef = useRef<{ letter: Letter; x: number; y: number; id: number; moved: boolean } | null>(
+    null,
+  );
+  const [drag, setDrag] = useState<{ letter: Letter; dx: number; dy: number; over: boolean } | null>(
+    null,
+  );
+  const onMoveRef = useRef<(e: PointerEvent) => void>(() => {});
+  const onUpRef = useRef<(e: PointerEvent) => void>(() => {});
+
   const after = useCallback((ms: number, fn: () => void) => {
     timers.current.push(window.setTimeout(fn, ms));
   }, []);
 
   useEffect(
     () => () => {
+      alive.current = false;
       timers.current.forEach(clearTimeout);
       clearTimeout(idleTimer.current);
       audio.stopVoice();
     },
     [],
   );
+
+  // listeners live on the window so the drag survives the finger leaving the
+  // piece; the refs keep them pointed at the current render's closure
+  useEffect(() => {
+    const move = (e: PointerEvent) => onMoveRef.current(e);
+    const up = (e: PointerEvent) => onUpRef.current(e);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
 
   const speakPrompt = useCallback((r: Round) => {
     void audio.speak(promptClips(r), fallbackPrompt(r));
@@ -106,85 +136,95 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     return () => clearTimeout(idleTimer.current);
   }, [round, locked, misses, speakPrompt]);
 
-  /** Aim the flying piece at the cat's mouth. */
-  const aimAtCat = (letter: Letter) => {
-    const piece = pieceRefs.current.get(letter);
-    const cat = catRef.current;
-    if (!piece || !cat) return;
-    const p = piece.getBoundingClientRect();
-    const c = cat.getBoundingClientRect();
-    const targetX = c.left + c.width / 2;
-    const targetY = c.top + c.height * 0.62;
-    piece.style.setProperty('--fly-x', `${targetX - (p.left + p.width / 2)}px`);
-    piece.style.setProperty('--fly-y', `${targetY - (p.top + p.height / 2)}px`);
+  /**
+   * Where the sushi has to be let go for the cat to eat it. Deliberately much
+   * bigger than the cat itself — a four-year-old's aim is approximate, and
+   * being fussy about the drop point punishes motor control rather than
+   * testing whether he knows the letter.
+   */
+  const overCat = (x: number, y: number) => {
+    const c = catRef.current?.getBoundingClientRect();
+    if (!c) return false;
+    return x > c.left - 110 && x < c.right + 110 && y > c.top - 160 && y < c.bottom + 40;
   };
 
-  const handlePick = (letter: Letter) => {
+  const handlePick = (letter: Letter, drop: { dx: number; dy: number }) => {
     if (locked || gated) return;
     audio.unlock();
     clearTimeout(idleTimer.current);
     setLook(round.options.indexOf(letter) < round.options.length / 2 ? -1 : 1);
 
+    // the piece is eaten where he let go of it, not from its slot on the counter
+    const el = pieceRefs.current.get(letter);
+    el?.style.setProperty('--drop-x', `${drop.dx}px`);
+    el?.style.setProperty('--drop-y', `${drop.dy}px`);
+
     if (letter === round.target) {
       setLocked(true);
       audio.tap();
-      aimAtCat(letter);
-      setPieceState({ [letter]: 'flying' });
+      audio.whoosh();
+      setPieceState({ [letter]: 'swallow' });
+      setMood('anticipate');
 
-      // he watches it come in, then eats it — two beats, not one
-      after(180, () => {
-        audio.whoosh();
-        setMood('anticipate');
-      });
-      after(720, () => {
+      after(380, () => {
         setMood('eating');
         audio.chomp();
-        void audio.oneShot('cat/nom', 0.8);
       });
 
-      after(1180, () => {
-        const first = misses === 0;
+      const first = misses === 0;
+      const nextEaten = [...eaten, letter];
+      const nextStreak = first ? streak + 1 : 0;
+      let nextLevel = level;
+      if (first && nextStreak > 0 && nextStreak % 3 === 0 && level < 3) nextLevel = promote(level);
+
+      after(760, async () => {
+        /* One ordered chain, not a pile of timers. Chewing, then the cat's
+           reaction, then the confirmation, then maybe a word of praise — each
+           waits for the last to finish, and the next round only begins when
+           the whole thing is done. Firing these independently meant the meow
+           talked over the confirmation and the praise talked over the next
+           prompt. */
+        await audio.speak(['cat/nom']);
+        if (!alive.current) return;
+
         setMood('happy');
         audio.happy();
-        void audio.oneShot(catSound(streak >= 2 ? 'excited' : 'happy'), 0.85);
-        void audio.speak([confirmClip(letter)], () =>
-          sayFallback(`${LETTERS[letter].sound.replaceAll('/', '')}. ${letter}!`, 0.85),
-        );
-
-        const nextEaten = [...eaten, letter];
         setEaten(nextEaten);
         onProfileChange((p) => recordAnswer(p, round.target, first));
-
-        const nextStreak = first ? streak + 1 : 0;
         setStreak(nextStreak);
-
-        let nextLevel = level;
-        if (first && nextStreak > 0 && nextStreak % 3 === 0 && level < 3) {
-          nextLevel = promote(level);
+        if (nextLevel !== level) {
           setLevel(nextLevel);
           onProfileChange((p) => ({ ...p, level: nextLevel }));
         }
-
         if (nextStreak >= 3) {
           setCheer(nextStreak >= 6 ? '🎉' : '⭐️');
           audio.sparkle();
           after(1400, () => setCheer(null));
         }
 
-        after(1500, () => {
-          if (nextEaten.length >= total) {
-            setMood('asleep');
-            audio.fanfare();
-            void audio.oneShot('cat/yawn', 0.9);
-            after(700, () => onMealComplete(nextEaten));
-            return;
-          }
-          // praise every single round turns into noise he stops hearing; keep it
-          // occasional so it still means something
-          if (Math.random() < 0.35) void audio.speak([randomPraise()]);
-          beginRound(nextRound(profileRef.current, nextLevel, recentTargets.current));
-        });
+        const praise = Math.random() < 0.35;
+        await audio.speak(
+          [
+            catSound(nextStreak >= 3 ? 'excited' : 'happy'),
+            160,
+            confirmClip(letter),
+            ...(praise ? [320, randomPraise()] : []),
+          ],
+          () => sayFallback(`${LETTERS[letter].sound.replaceAll('/', '')}. ${letter}!`, 0.85),
+        );
+        if (!alive.current) return;
+
+        if (nextEaten.length >= total) {
+          setMood('asleep');
+          audio.fanfare();
+          await audio.speak(['cat/yawn']);
+          if (alive.current) onMealComplete(nextEaten);
+          return;
+        }
+
+        after(260, () => beginRound(nextRound(profileRef.current, nextLevel, recentTargets.current)));
       });
+
       return;
     }
 
@@ -194,7 +234,6 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     setStreak(0);
     setMood('confused');
     audio.puzzled();
-    void audio.oneShot(catSound('curious'), 0.8);
     setPieceState({ [letter]: 'reject' });
     onProfileChange((p) => recordConfusion(p, round.target, letter));
 
@@ -204,15 +243,60 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       onProfileChange((p) => ({ ...p, level: down }));
     }
 
-    after(850, () => {
+    // the cat reacts first, then the prompt comes back — in that order
+    void audio.speak([catSound('curious')]).then(() => {
+      if (!alive.current) return;
       setMood('idle');
       setPieceState(m >= 2 ? { [round.target]: 'hint' } : {});
-      if (m >= 2) {
-        void audio.speak(['ui/this-one', 260, ...promptClips(round)], fallbackPrompt(round));
-      } else {
-        speakPrompt(round);
-      }
+      /* On the second miss the right piece starts glowing, so the glow does the
+         pointing. Saying "this one" on top of it just added a phrase he has to
+         decode; replaying the sound is the thing that actually teaches. */
+      return audio.speak(promptClips(round), fallbackPrompt(round));
     });
+  };
+
+  const grab = (letter: Letter, e: React.PointerEvent) => {
+    if (locked || gated) return;
+    audio.unlock();
+    audio.tap();
+    clearTimeout(idleTimer.current);
+    grabRef.current = { letter, x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+    setDrag({ letter, dx: 0, dy: 0, over: false });
+  };
+
+  onMoveRef.current = (e: PointerEvent) => {
+    const g = grabRef.current;
+    if (!g || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (Math.hypot(dx, dy) > 8) g.moved = true;
+    const over = overCat(e.clientX, e.clientY);
+    setDrag({ letter: g.letter, dx, dy, over });
+    // the cat opens up as the food comes near, which is the cue that he can let go
+    if (!locked) setMood(over ? 'anticipate' : 'idle');
+  };
+
+  onUpRef.current = (e: PointerEvent) => {
+    const g = grabRef.current;
+    if (!g || e.pointerId !== g.id) return;
+    grabRef.current = null;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    const over = overCat(e.clientX, e.clientY);
+    setDrag(null);
+
+    if (over && g.moved) {
+      handlePick(g.letter, { dx, dy });
+      return;
+    }
+    if (!locked) setMood('idle');
+    if (!g.moved) {
+      /* He tapped instead of dragging. Rather than nothing happening, the piece
+         hops to show it wants to be carried, and the sound plays again. */
+      setPieceState({ [g.letter]: 'hop' });
+      after(700, () => setPieceState((prev) => (prev[g.letter] === 'hop' ? {} : prev)));
+      speakPrompt(round);
+    }
   };
 
   const fullness = eaten.length / total;
@@ -239,12 +323,14 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
             index={i}
             state={pieceState[l] ?? 'rest'}
             disabled={locked || gated}
-            onPick={() => handlePick(l)}
+            drag={drag?.letter === l ? { dx: drag.dx, dy: drag.dy } : null}
+            over={drag?.letter === l ? drag.over : false}
+            onGrab={(e) => grab(l, e)}
           />
         </div>
       )),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [round, pieceState, locked, gated],
+    [round, pieceState, locked, gated, drag],
   );
 
   return (

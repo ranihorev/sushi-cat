@@ -1,8 +1,8 @@
 # Feed the Sushi Cat
 
 A letter-sound game for a 4-year-old. A cat sits behind a sushi counter; each
-piece is stamped with a letter; the child feeds it the piece matching the sound
-it asks for.
+piece is stamped with a letter; the child hears a sound and drags the matching
+piece up to the cat to feed it.
 
 The game learns which letters he struggles with and shows those more often.
 
@@ -91,9 +91,16 @@ app and works offline — every clip and all the art is cached on first run.
 
 ## How it teaches
 
+**Feeding is a drag, not a tap.** Carrying a piece to the cat is a more
+deliberate act than tapping, so it makes him commit to a choice instead of
+batting at whatever is nearest. The drop zone is far larger than the cat —
+being fussy about the drop point would test motor control, not letters. A tap
+with no drag answers nothing; the piece hops to show it wants carrying and the
+sound plays again.
+
 **Pedagogy.** The prompt is a sound, never a letter name. Uppercase only.
 No timers, no scores, no losing — a wrong tap gets a puzzled cat and the prompt
-again; after two misses the right piece glows until it's tapped. Every round
+again; after two misses the right piece glows and the sound repeats. Every round
 ends in success. A meal is 8 pieces, about 3–5 minutes. Repetition across days
 beats length within a day.
 

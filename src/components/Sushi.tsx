@@ -2,14 +2,18 @@ import { memo } from 'react';
 import type { Letter } from '../game/letters';
 import { LETTERS, TOPPING_COLORS } from '../game/letters';
 
-export type PieceState = 'rest' | 'flying' | 'reject' | 'hint';
+export type PieceState = 'rest' | 'swallow' | 'reject' | 'hint' | 'hop';
 
 interface Props {
   letter: Letter;
   state: PieceState;
   index: number;
   disabled?: boolean;
-  onPick: () => void;
+  /** live offset while it's being carried, in px */
+  drag?: { dx: number; dy: number } | null;
+  /** true while it's held over the cat */
+  over?: boolean;
+  onGrab: (e: React.PointerEvent) => void;
 }
 
 const RICE = '#FFFBF2';
@@ -112,24 +116,42 @@ function Topping({ kind }: { kind: keyof typeof TOPPING_COLORS }) {
   }
 }
 
-function SushiPiece({ letter, state, index, disabled, onPick }: Props) {
+function SushiPiece({ letter, state, index, disabled, drag, over, onGrab }: Props) {
   const cls =
-    state === 'flying' ? 'sushi-fly'
+    state === 'swallow' ? 'sushi-swallow'
     : state === 'reject' ? 'sushi-reject'
     : state === 'hint' ? 'sushi-hint'
+    : state === 'hop' ? 'sushi-hop'
     : 'sushi-rest';
+
+  /* While it's being carried the piece follows the finger exactly, so no
+     transition — a transition here makes it lag behind and feel broken. It
+     springs back when let go. */
+  const carried = !!drag;
+  const style: React.CSSProperties = carried
+    ? {
+        transform: `translate(${drag!.dx}px, ${drag!.dy}px) scale(${over ? 1.16 : 1.08}) rotate(${
+          Math.max(-9, Math.min(9, drag!.dx * 0.05))
+        }deg)`,
+        transition: 'none',
+        zIndex: 40,
+        filter: over
+          ? 'drop-shadow(0 18px 14px rgba(0,0,0,.4)) drop-shadow(0 0 18px rgba(247,199,68,.85))'
+          : 'drop-shadow(0 16px 12px rgba(0,0,0,.35))',
+      }
+    : { animationDelay: state === 'rest' ? `${index * 70}ms` : undefined };
 
   return (
     <button
       type="button"
       onPointerDown={(e) => {
         e.preventDefault();
-        if (!disabled) onPick();
+        if (!disabled) onGrab(e);
       }}
       disabled={disabled}
       aria-label={`letter ${letter}`}
-      className={`sushi-btn ${cls}`}
-      style={{ animationDelay: state === 'rest' ? `${index * 70}ms` : undefined }}
+      className={`sushi-btn ${carried ? 'sushi-carried' : cls}`}
+      style={style}
     >
       <svg viewBox="0 0 130 118" className="h-full w-full overflow-visible">
         <ellipse cx="65" cy="108" rx="46" ry="7" fill="rgba(0,0,0,0.22)" />

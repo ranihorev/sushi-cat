@@ -39,9 +39,9 @@ const TARGET_RMS = 0.17;
 const STOPS = new Set(['B', 'C', 'D', 'G', 'J', 'K', 'P', 'T', 'X', 'Q']);
 const STOP_MAX = 0.15;
 /** Held sounds get room to breathe, but not forever. */
-const CONTINUANT_MAX = 0.62;
+const CONTINUANT_MAX = 0.78;
 /** Vowels sit in between. */
-const VOWEL_MAX = 0.42;
+const VOWEL_MAX = 0.58;
 const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 
 const GAP = 0.42;
@@ -49,14 +49,14 @@ const GAP = 0.42;
 const PROMPT_REPEATS = 1;
 const FADE_IN = 0.012;
 const FADE_OUT = 0.045;
+/** Spoken parts are slowed to this factor — a 4-year-old needs the letter
+    name landing slowly, and TTS default pace is briskly adult. */
+const SPEECH_TEMPO = 0.82;
 
 const work = await mkdtemp(join(tmpdir(), 'sushi-proc-'));
 const exists = (p) => access(p).then(() => true, () => false);
 
-async function decode(mp3) {
-  const wav = join(work, 'in.wav');
-  await rm(wav, { force: true });
-  await run('ffmpeg', ['-y', '-i', mp3, '-ac', '1', '-ar', String(RATE), '-f', 'wav', wav]);
+async function readWav(wav) {
   const buf = await readFile(wav);
   let off = 12;
   while (off + 8 <= buf.length) {
@@ -70,11 +70,17 @@ async function decode(mp3) {
     }
     off += 8 + size + (size % 2);
   }
-  throw new Error(`no data chunk in ${mp3}`);
+  throw new Error(`no data chunk in ${wav}`);
 }
 
-async function encode(pcm, mp3) {
-  const wav = join(work, 'out.wav');
+async function decode(mp3) {
+  const wav = join(work, 'in.wav');
+  await rm(wav, { force: true });
+  await run('ffmpeg', ['-y', '-i', mp3, '-ac', '1', '-ar', String(RATE), '-f', 'wav', wav]);
+  return readWav(wav);
+}
+
+async function writeWav(pcm, path) {
   const header = Buffer.alloc(44);
   const bytes = pcm.length * 2;
   header.write('RIFF', 0);
@@ -89,12 +95,27 @@ async function encode(pcm, mp3) {
   header.writeUInt16LE(16, 34);
   header.write('data', 36);
   header.writeUInt32LE(bytes, 40);
-
   const body = Buffer.alloc(bytes);
   for (let i = 0; i < pcm.length; i++) {
     body.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(pcm[i] * 32767))), i * 2);
   }
-  await writeFile(wav, Buffer.concat([header, body]));
+  await writeFile(path, Buffer.concat([header, body]));
+}
+
+/** Slow speech down without shifting pitch. Range of atempo is 0.5-2.0. */
+async function stretch(pcm, factor) {
+  if (factor === 1) return pcm;
+  const src = join(work, 'stretch-in.wav');
+  const dst = join(work, 'stretch-out.wav');
+  await writeWav(pcm, src);
+  await rm(dst, { force: true });
+  await run('ffmpeg', ['-y', '-i', src, '-filter:a', `atempo=${factor}`, dst]);
+  return readWav(dst);
+}
+
+async function encode(pcm, mp3) {
+  const wav = join(work, 'out.wav');
+  await writeWav(pcm, wav);
   await run('ffmpeg', ['-y', '-i', wav, '-codec:a', 'libmp3lame', '-q:a', '4', mp3]);
 }
 
@@ -288,15 +309,19 @@ for (const f of confirmFiles) {
   const sound = normalize(shape(pcm.slice(Math.max(0, ev[0][0] - pad), ev[0][1]), maxFor(L)));
   const nameStart = Math.max(0, ev[1][0] - pad);
   const name = normalize(pcm.slice(nameStart, ev[ev.length - 1][1] + pad * 3));
+  // only the spoken half is slowed; stretching a stop burst just smears it
+  const slowName = await stretch(name, SPEECH_TEMPO);
 
-  console.log(`  confirm/${L}  sound ${(sound.length / RATE).toFixed(2)}s + letter name`);
-  if (!DRY) await encode(concat([sound, silence(0.26), name]), path);
+  console.log(`  confirm/${L}  sound ${(sound.length / RATE).toFixed(2)}s + letter name slowed`);
+  if (!DRY) await encode(concat([sound, silence(0.42), slowName]), path);
   changed++;
 }
 
 /* everything else: trim and level only — these are real words and sentences */
 for (const dir of ['word', 'name', 'praise', 'ui', 'cat']) {
   const files = (await readdir(join(AUDIO, dir)).catch(() => [])).filter((f) => f.endsWith('.mp3'));
+  // the cat's own noises are already the right pace; only speech gets slowed
+  const tempo = dir === 'cat' ? 1 : SPEECH_TEMPO;
   for (const f of files.sort()) {
     const path = join(AUDIO, dir, f);
     if (!(await exists(path))) continue;
@@ -306,7 +331,7 @@ for (const dir of ['word', 'name', 'praise', 'ui', 'cat']) {
       problems.push(`${dir}/${f}: silent`);
       continue;
     }
-    if (!DRY) await encode(out, path);
+    if (!DRY) await encode(await stretch(out, tempo), path);
     changed++;
   }
   if (files.length) console.log(`  ${dir}/  ${files.length} clips trimmed and levelled`);
