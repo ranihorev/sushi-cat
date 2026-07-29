@@ -30,9 +30,9 @@ const force = process.argv.includes('--force');
 const SOUNDS = [
   { path: 'meow-happy-1', dur: 1.1, text: 'a single short cheerful kitten meow, cute and bright, clean studio recording, no music' },
   { path: 'meow-happy-2', dur: 1.1, text: 'a short sweet happy cat meow, higher pitched, cute, clean recording, no music' },
-  { path: 'trill-1', dur: 1.2, text: 'a cat chirp trill, excited and friendly, short, clean recording, no music' },
+  { path: 'trill-1', dur: 1.4, text: 'a real domestic cat making an excited chirping trill, rolling brrrp vocalisation, single animal, close microphone, no music, no instruments' },
   { path: 'trill-2', dur: 1.2, text: 'a happy cat brrrp chirrup, short and playful, clean recording, no music' },
-  { path: 'curious-1', dur: 1.2, text: 'a short questioning cat mrrp, curious rising tone, clean recording, no music' },
+  { path: 'curious-1', dur: 1.4, text: 'a real domestic cat making a short confused questioning meow, rising in pitch at the end, single animal vocalisation, close microphone, no music, no instruments' },
   { path: 'curious-2', dur: 1.2, text: 'a confused little cat murmur, rising questioning meow, short, clean recording, no music' },
   { path: 'purr', dur: 2.5, text: 'a soft contented cat purring, warm and steady, close mic, no music' },
   { path: 'nom', dur: 1.2, text: 'a cat eating, quick soft chewing and gulping, close mic, no music' },
