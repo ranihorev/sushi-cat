@@ -81,6 +81,9 @@ export function isSolid(p: Profile, l: Letter): boolean {
   return s.seen >= 4 && s.mastery >= 0.82;
 }
 
+/** How much of the alphabet is in play, and how much of it has stuck. */
+export const lettersSolid = (p: Profile) => ALL_LETTERS.filter((l) => isSolid(p, l)).length;
+
 /** Called at the end of a meal: widen the active set if the current one is solid. */
 export function maybeUnlockBatch(p: Profile): { profile: Profile; unlocked: Letter[] } {
   const allSolid = p.activeSet.every((l) => isSolid(p, l));
@@ -94,6 +97,11 @@ export function maybeUnlockBatch(p: Profile): { profile: Profile; unlocked: Lett
     profile: { ...p, activeSet: [...p.activeSet, ...add] },
     unlocked: add,
   };
+}
+
+/** Parent override: put the whole alphabet in play right now. */
+export function unlockAllLetters(p: Profile): Profile {
+  return { ...p, activeSet: [...ALL_LETTERS] };
 }
 
 /** The child's own letters matter more than any optimal ordering at this age. */

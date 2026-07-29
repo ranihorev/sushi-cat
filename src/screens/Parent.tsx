@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { audio, clipsForLetter } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { ALL_LETTERS, LETTERS } from '../game/letters';
-import { blankProfile, isSolid, statFor, withNameLetters } from '../game/store';
+import {
+  blankProfile,
+  isSolid,
+  lettersSolid,
+  statFor,
+  unlockAllLetters,
+  withNameLetters,
+} from '../game/store';
 import type { Profile } from '../game/types';
 
 interface Props {
@@ -29,6 +36,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
     });
 
   const solid = profile.activeSet.filter((l) => isSolid(profile, l)).length;
+  const alphabetSolid = lettersSolid(profile);
 
   return (
     <div className="h-full w-full overflow-y-auto bg-nori-deep px-5 py-6 text-rice">
@@ -37,9 +45,20 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
           <div>
             <h2 className="text-2xl font-extrabold">Progress</h2>
             <p className="text-sm text-white/50">
-              {profile.mealsCompleted} meals · {solid}/{profile.activeSet.length} letters solid ·
-              level {profile.level} · {profile.dayStreak}-day streak
+              {profile.mealsCompleted} meals · {solid}/{profile.activeSet.length} of the current
+              set solid · level {profile.level} · {profile.dayStreak}-day streak
             </p>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-2 w-44 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#8FC46B] transition-all"
+                  style={{ width: `${(alphabetSolid / 26) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-white/40">
+                {alphabetSolid}/26 of the alphabet · {profile.activeSet.length} introduced
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -51,9 +70,22 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
         </header>
 
         <section className="mb-8">
-          <h3 className="mb-2 text-sm font-bold tracking-wide text-white/50 uppercase">
-            Letters — tap to add or remove from the active set
-          </h3>
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold tracking-wide text-white/50 uppercase">
+              Letters — tap to add or remove from the active set
+            </h3>
+            <button
+              type="button"
+              onPointerDown={() => onProfileChange(unlockAllLetters)}
+              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/70"
+            >
+              Introduce all 26 now
+            </button>
+          </div>
+          <p className="mb-2 text-xs text-white/35">
+            New letters unlock on their own, 2–3 at a time, once everything in the current set is
+            solid. Only override that if he's clearly bored.
+          </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
             {ALL_LETTERS.map((l) => {
               const s = statFor(profile, l);
