@@ -70,15 +70,19 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     timers.current.push(window.setTimeout(fn, ms));
   }, []);
 
-  useEffect(
-    () => () => {
+  /* Set on the way in as well as cleared on the way out: StrictMode mounts,
+     unmounts and mounts again, and a flag that is only ever cleared would leave
+     the live screen believing it had been thrown away — every round would go
+     silent after the first bite. */
+  useEffect(() => {
+    alive.current = true;
+    return () => {
       alive.current = false;
       timers.current.forEach(clearTimeout);
       clearTimeout(idleTimer.current);
       audio.stopVoice();
-    },
-    [],
-  );
+    };
+  }, []);
 
   // listeners live on the window so the drag survives the finger leaving the
   // piece; the refs keep them pointed at the current render's closure
@@ -308,6 +312,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       round.options.map((l, i) => (
         <div
           key={`${round.target}-${l}`}
+          className="pointer-events-auto"
           ref={(el) => {
             if (el) pieceRefs.current.set(l, el);
             else pieceRefs.current.delete(l);
@@ -355,7 +360,10 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       <div className="relative min-h-0 flex-1">
         <Restaurant unlocked={profile.decorations} dim />
 
-        <div className="relative z-10 flex h-full flex-col items-center justify-end gap-1 pb-[clamp(64px,10vh,110px)]">
+        {/* Sits above the counter so the sushi can never cover the replay button.
+            The column itself is click-through — it spans the whole room, and the
+            sushi poke up into it — so only the controls take presses. */}
+        <div className="pointer-events-none relative z-20 flex h-full flex-col items-center justify-end gap-1 pb-[clamp(76px,12vh,124px)]">
           {cheer && (
             <div className="float-up pointer-events-none absolute top-[16%] text-6xl">{cheer}</div>
           )}
@@ -382,7 +390,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
                 audio.unlock();
                 speakPrompt(round);
               }}
-              className="relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-white/12 active:scale-95"
+              className="pointer-events-auto relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-white/12 active:scale-95"
             >
               <span className="pulse-ring absolute inset-0 rounded-full border-4 border-tamago/40" />
               <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-rice">
@@ -401,10 +409,17 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
         </div>
       </div>
 
-      {/* the counter — sushi rest on it */}
-      <div className="relative z-10 h-[clamp(78px,13vh,132px)] shrink-0">
+      {/* The counter — sushi rest on it, poking up well above it. While a piece
+          is being carried this layer jumps above the room so the piece travels
+          over the cat rather than behind it. */}
+      <div
+        className="relative h-[clamp(78px,13vh,132px)] shrink-0"
+        style={{ zIndex: drag ? 40 : 10 }}
+      >
         <Counter />
-        <div className="absolute inset-x-0 bottom-[34%] flex items-end justify-center gap-[clamp(8px,2.5vw,32px)] px-3">
+        {/* click-through: the row is far taller than the sushi drawn in it, and
+            an invisible box must not swallow presses meant for the room above */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-[34%] flex items-end justify-center gap-[clamp(8px,2.5vw,32px)] px-3">
           {pieces}
         </div>
       </div>

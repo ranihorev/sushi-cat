@@ -10,7 +10,11 @@ interface Props {
 /** Progress, expressed as food. No numbers, no score. */
 function PlateRow({ eaten, total }: Props) {
   return (
-    <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+    <div
+      role="img"
+      aria-label={`${eaten.length} of ${total} eaten`}
+      className="flex items-center justify-center gap-1.5 sm:gap-2"
+    >
       {Array.from({ length: total }, (_, i) => {
         const letter = eaten[i];
         return (

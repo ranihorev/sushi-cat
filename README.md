@@ -77,6 +77,29 @@ before, just without the cat reacting out loud.
 The interface sounds (chomp, chime, puzzled) are synthesized in the browser with
 Web Audio — no files, works offline, nothing to generate.
 
+## Tests
+
+```bash
+npm test          # game logic, audio sequencing, the play screen (jsdom)
+npm run test:e2e  # a real browser: hit targets, drag-to-feed, clips (Playwright)
+npm run test:all  # both
+```
+
+The two layers exist because they catch different things.
+
+`npm test` runs the real `AudioEngine` against a fake Web Audio stack that names
+every buffer, so a test can assert exactly which clips reached the speakers and
+in what order — including that a new prompt cuts off the old one. `clips.test.ts`
+checks that every one of the ~120 clips the game can ask for is on disk, which
+is the sort of thing nobody notices by eye.
+
+`npm run test:e2e` exists because the worst bug so far was invisible to jsdom:
+the sushi row is a full-width box far taller than the sushi drawn in it, and it
+sat on top of the replay button. The button looked perfect and its lower 40%
+silently ate every press. The suite now sweeps every point of every control at
+five viewports and fails if anything intercepts one. `playwright install
+chromium` once, first time.
+
 ## Deploy to the tablet
 
 ```bash
@@ -155,6 +178,7 @@ scripts/
   process-audio.mjs        trims schwas off stops, levels everything
   measure-audio.mjs        checks clip shape without needing the API
   verify-audio.mjs         transcribes prompts back as a smoke test
+e2e/                       browser tests — layout, hit targets, a real round
 ```
 
 The cat is driven only by `{ fullness, mood }`. Swapping the SVG for illustrated
