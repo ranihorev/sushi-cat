@@ -24,11 +24,21 @@ export const missingClips = new Set<string>();
 /** how long a fake clip lasts, in ms */
 export const CLIP_MS = 100;
 
+/**
+ * Per-clip lengths, for tests where one thing has to outlast another.
+ *
+ * The real clips run from 0.2s to 1.6s. Flattening them all to CLIP_MS hides
+ * every ordering bug that only shows up when a clip is longer than the gap
+ * someone left for it — which is how a cut-off greeting went unnoticed.
+ */
+export const clipDurations = new Map<string, number>();
+
 export function resetAudioStub() {
   playLog.length = 0;
   cutLog.length = 0;
   spokenFallbacks.length = 0;
   missingClips.clear();
+  clipDurations.clear();
 }
 
 /** `/audio/prompt/M.mp3` -> `prompt/M` */
@@ -99,7 +109,8 @@ class StubBufferSource extends StubNode {
 
   start() {
     if (this.buffer) playLog.push(this.buffer.name);
-    this.timer = setTimeout(() => this.finish(), CLIP_MS);
+    const ms = (this.buffer && clipDurations.get(this.buffer.name)) ?? CLIP_MS;
+    this.timer = setTimeout(() => this.finish(), ms);
   }
 
   stop() {

@@ -27,6 +27,24 @@ interface Props {
 
 const IDLE_NUDGE_MS = 7000;
 
+/* Pacing.
+   Everything he hears at a round boundary is letters. The confirmation is
+   "/mmm/ ... M!" and the next prompt is "T ... /t/" — four letter sounds in a
+   row, and with only a quarter-second between them they run together into one
+   stream with no telling where the answer ended and the new question began.
+   Silence is the only thing marking that boundary, so these gaps are
+   deliberately longer than they look like they should be on the page. */
+const PROMPT_LEAD_MS = 450; // between the new pieces appearing and the prompt
+const ROUND_GAP_MS = 1400; // after the confirmation, before the next round starts
+const RETRY_GAP_MS = 450; // after the puzzled meow, before the question comes back
+const GREETING_GAP_MS = 700; // after the cat's hello, before the very first prompt
+
+/* The cat says hello before the first question rather than underneath it. This
+   rides in the same chain as the prompt, so the prompt waits for the meow
+   instead of cutting it off — which is what happened when the greeting was
+   fired separately as the screen opened. */
+const GREETING: Array<string | number> = ['cat/greet', GREETING_GAP_MS];
+
 export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props) {
   const total = profile.settings.roundsPerMeal;
 
@@ -41,6 +59,8 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
   const [gated, setGated] = useState(profile.settings.gateChoices);
   const [look, setLook] = useState(0);
   const [cheer, setCheer] = useState<string | null>(null);
+  /** bumped whenever he asks to hear the prompt again, to restart the idle clock */
+  const [heard, setHeard] = useState(0);
 
   const catRef = useRef<HTMLDivElement>(null);
   const pieceRefs = useRef(new Map<Letter, HTMLDivElement>());
@@ -103,9 +123,21 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     void audio.speak(promptClips(r), fallbackPrompt(r));
   }, []);
 
+  /* He asked to hear it again, so give him another quiet stretch to think in.
+     Without this the idle nudge keeps its original deadline and the game can
+     repeat the question a moment after he pressed the button — the same
+     talking-over-itself that makes the whole thing hard to follow. */
+  const replayPrompt = useCallback(
+    (r: Round) => {
+      speakPrompt(r);
+      setHeard((n) => n + 1);
+    },
+    [speakPrompt],
+  );
+
   /* -------- start of a round: play the prompt, then open up the choices -------- */
   const beginRound = useCallback(
-    (r: Round) => {
+    (r: Round, intro: Array<string | number> = []) => {
       setRound(r);
       setPieceState({});
       setMisses(0);
@@ -114,21 +146,22 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       setGated(profile.settings.gateChoices);
       recentTargets.current = [...recentTargets.current, r.target].slice(-4);
 
-      after(380, () => {
-        void audio.speak(promptClips(r), fallbackPrompt(r)).then(() => {
+      after(PROMPT_LEAD_MS, () => {
+        void audio.speak([...intro, ...promptClips(r)], fallbackPrompt(r)).then(() => {
           setGated(false);
         });
         // never leave him unable to tap, even if audio fails to load
-        after(profile.settings.gateChoices ? 2600 : 0, () => setGated(false));
+        const stuck = 2600 + (intro.length ? 2000 : 0);
+        after(profile.settings.gateChoices ? stuck : 0, () => setGated(false));
         setLocked(false);
       });
     },
     [after, profile.settings.gateChoices],
   );
 
-  // first round
+  // first round — the cat greets him, then asks
   useEffect(() => {
-    beginRound(round);
+    beginRound(round, GREETING);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -138,7 +171,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     clearTimeout(idleTimer.current);
     idleTimer.current = window.setTimeout(() => speakPrompt(round), IDLE_NUDGE_MS);
     return () => clearTimeout(idleTimer.current);
-  }, [round, locked, misses, speakPrompt]);
+  }, [round, locked, misses, heard, speakPrompt]);
 
   /**
    * Where the sushi has to be let go for the cat to eat it. Deliberately much
@@ -226,7 +259,12 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           return;
         }
 
-        after(260, () => beginRound(nextRound(profileRef.current, nextLevel, recentTargets.current)));
+        /* A real pause before the next question. The cat stays looking pleased
+           through it, so the quiet reads as "that was right" rather than as the
+           game having stalled. */
+        after(ROUND_GAP_MS, () =>
+          beginRound(nextRound(profileRef.current, nextLevel, recentTargets.current)),
+        );
       });
 
       return;
@@ -254,8 +292,9 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       setPieceState(m >= 2 ? { [round.target]: 'hint' } : {});
       /* On the second miss the right piece starts glowing, so the glow does the
          pointing. Saying "this one" on top of it just added a phrase he has to
-         decode; replaying the sound is the thing that actually teaches. */
-      return audio.speak(promptClips(round), fallbackPrompt(round));
+         decode; replaying the sound is the thing that actually teaches. The beat
+         first gives the glow a moment to land before the sound arrives. */
+      return audio.speak([RETRY_GAP_MS, ...promptClips(round)], fallbackPrompt(round));
     });
   };
 
@@ -299,7 +338,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
          hops to show it wants to be carried, and the sound plays again. */
       setPieceState({ [g.letter]: 'hop' });
       after(700, () => setPieceState((prev) => (prev[g.letter] === 'hop' ? {} : prev)));
-      speakPrompt(round);
+      replayPrompt(round);
     }
   };
 
@@ -388,7 +427,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
               aria-label="say it again"
               onPointerDown={() => {
                 audio.unlock();
-                speakPrompt(round);
+                replayPrompt(round);
               }}
               className="pointer-events-auto relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-white/12 active:scale-95"
             >

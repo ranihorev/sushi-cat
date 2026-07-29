@@ -55,7 +55,8 @@ export async function startMeal(page: Page) {
   await page.goto('/');
   await page.getByLabel('play').click();
   await page.locator('.sushi-btn').first().waitFor({ state: 'visible' });
-  await page.waitForTimeout(1600); // the prompt, plus the pieces' entrance
+  // the cat's hello, the beat after it, then the prompt itself
+  await page.waitForTimeout(3600);
 }
 
 /** Which letter the prompt just asked for. */

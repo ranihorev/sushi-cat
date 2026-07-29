@@ -5,7 +5,7 @@ import { CAT_CLIPS } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { blankProfile } from '../game/store';
 import type { Profile } from '../game/types';
-import { playLog } from '../test/audio-stub';
+import { clipDurations, cutLog, playLog } from '../test/audio-stub';
 import { Play } from './Play';
 
 /* jsdom has no layout, so every element's rect is 0x0 at the origin. `overCat`
@@ -40,7 +40,7 @@ const start = async (overrides: Partial<Profile> = {}) => {
   const initial = { ...blankProfile(), ...overrides };
   profileSeen = initial;
   render(<Harness initial={initial} />);
-  await tick(1000); // the prompt is held back briefly at the start of a round
+  await tick(2200); // the cat's hello, then a beat, then the prompt
 };
 
 const tick = async (ms: number) => {
@@ -50,7 +50,7 @@ const tick = async (ms: number) => {
 };
 
 /** the round is over and the next prompt has landed */
-const settleRound = () => tick(4000);
+const settleRound = () => tick(6000);
 
 /** The prompt names the letter it wants, so the log says what the answer is. */
 const targetOnScreen = (): Letter => {
@@ -109,7 +109,18 @@ describe('the prompt', () => {
   it('names the letter and then says its sound', async () => {
     await start();
     const target = targetOnScreen();
-    expect(playLog).toEqual([`letter/${target}`, `prompt/${target}`]);
+    expect(playLog).toEqual(['cat/greet', `letter/${target}`, `prompt/${target}`]);
+  });
+
+  /* The greeting used to be fired off as the screen opened while the prompt ran
+     on its own timer, so the prompt's stopVoice() chopped the meow in half and
+     the two arrived on top of each other. It rides in the prompt's own chain
+     now, which is what keeps them in order. */
+  it('lets the cat finish saying hello before it asks anything', async () => {
+    clipDurations.set('cat/greet', 900); // the real meow is nearly a second long
+    await start();
+    expect(playLog[0]).toBe('cat/greet');
+    expect(cutLog).not.toContain('cat/greet');
   });
 
   it('puts the answer on the counter', async () => {
@@ -166,6 +177,22 @@ describe('the say-it-again button', () => {
     expect(playLog.slice(-2)).toEqual([`letter/${target}`, `prompt/${target}`]);
   });
 
+  /* The nudge used to keep the deadline it was given when the round opened, so
+     pressing the button at six seconds got the question repeated at seven —
+     the game talking over itself a moment after he asked it to speak. */
+  it('buys him another quiet stretch to think in', async () => {
+    await start();
+    await tick(6000);
+    playLog.length = 0;
+
+    fireEvent.pointerDown(screen.getByLabelText('say it again'));
+    await tick(1000);
+    const heard = playLog.length;
+
+    await tick(3000); // past the original nudge, but not past the new one
+    expect(playLog).toHaveLength(heard);
+  });
+
   it('is not an answer', async () => {
     await start();
     fireEvent.pointerDown(screen.getByLabelText('say it again'));
@@ -193,6 +220,26 @@ describe('feeding the cat', () => {
     const first = await feedCorrect();
     expect(targetOnScreen()).not.toBe(first);
     expect(optionsOnScreen()).toContain(targetOnScreen());
+  });
+
+  /* The confirmation is "/mmm/ ... M!" and the next prompt is "T ... /t/". Back
+     to back they are four letter sounds in a row with nothing to separate them,
+     which is exactly what made the game confusing to listen to. The silence in
+     between is the only thing marking where one question ended. */
+  it('leaves a silence between the answer and the next question', async () => {
+    await start();
+    const target = targetOnScreen();
+
+    dragTo(target, ON_CAT);
+    await tick(2000); // long enough for the whole confirmation to have played
+    expect(playLog).toContain(`confirm/${target}`);
+    playLog.length = 0;
+
+    await tick(700);
+    expect(playLog).toEqual([]);
+
+    await settleRound();
+    expect(targetOnScreen()).not.toBe(target);
   });
 
   it('fills the plate one piece at a time', async () => {
@@ -320,7 +367,7 @@ describe('gestures that are not an answer', () => {
 
   it('holds the pieces shut until the prompt has been heard, when asked to', async () => {
     render(<Harness initial={{ ...blankProfile(), settings: { gateChoices: true, roundsPerMeal: 8 } }} />);
-    await tick(400);
+    await tick(1400); // the prompt has started but not finished
     const target = targetOnScreen();
 
     dragTo(target, ON_CAT);
@@ -347,7 +394,7 @@ describe('under StrictMode', () => {
         <Harness initial={initial} />
       </StrictMode>,
     );
-    await tick(1000);
+    await tick(2200);
 
     const target = targetOnScreen();
     dragTo(target, ON_CAT);

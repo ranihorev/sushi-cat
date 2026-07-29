@@ -52,7 +52,8 @@ export default function App() {
       ...UI_CLIPS,
       ...CAT_CLIPS,
     ]);
-    void audio.oneShot('cat/greet', 0.9);
+    // the greeting belongs to Play, which plays it in front of the first prompt
+    // rather than under it
     audio.preloadIdle(ALL_LETTERS.flatMap(clipsForLetter));
     update(noteSession);
     setEaten([]);

@@ -127,6 +127,15 @@ again; after two misses the right piece glows and the sound repeats. Every round
 ends in success. A meal is 8 pieces, about 3–5 minutes. Repetition across days
 beats length within a day.
 
+**Pacing.** Everything at a round boundary is letters — the confirmation is
+"/mmm/ … M!" and the next prompt is "T … /t/". Butted together they are four
+letter sounds in a row and he cannot hear where the answer ended and the new
+question began, so there is close to two seconds of silence between them (the
+constants are at the top of `Play.tsx`). The cat keeps looking pleased through
+it, so the quiet reads as *that was right* rather than as a stall. The greeting
+runs in the same chain as the first prompt for the same reason — fired
+separately it got cut in half by the prompt that followed it.
+
 **Difficulty** is invisible and never announced.
 
 | Level | Choices | Lookalikes |
