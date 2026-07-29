@@ -179,7 +179,9 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
             after(700, () => onMealComplete(nextEaten));
             return;
           }
-          void audio.speak([randomPraise()]);
+          // praise every single round turns into noise he stops hearing; keep it
+          // occasional so it still means something
+          if (Math.random() < 0.35) void audio.speak([randomPraise()]);
           beginRound(nextRound(profileRef.current, nextLevel, recentTargets.current));
         });
       });

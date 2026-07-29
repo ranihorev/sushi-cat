@@ -45,6 +45,8 @@ const VOWEL_MAX = 0.42;
 const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 
 const GAP = 0.42;
+/** How many times the prompt clip says the sound. One is plenty. */
+const PROMPT_REPEATS = 1;
 const FADE_IN = 0.012;
 const FADE_OUT = 0.045;
 
@@ -249,12 +251,51 @@ for (const f of promptFiles) {
     `  prompt/${L}  ${(pcm.length / RATE).toFixed(2)}s -> ${secs.toFixed(2)}s` +
       `${STOPS.has(L) ? '  (stop, schwa removed)' : ''}`,
   );
-  if (!DRY) await encode(concat([one, silence(GAP), one]), path);
+
+  /* One utterance, not two. The round already says the sound again in the
+     confirmation, so doubling it here meant hearing it three times per round —
+     enough that it stopped registering as a question. The replay button and the
+     idle nudge are there for a second listen when he wants one. */
+  const built = PROMPT_REPEATS > 1 ? concat([one, silence(GAP), one]) : one;
+  if (!DRY) await encode(built, path);
+  changed++;
+}
+
+/* confirmations are "<sound> ... <letter name>". The sound half has the same
+   trailing-schwa problem as the prompt — left alone, C confirms as "kuh, see"
+   and teaches the schwa right back. So clean the first half exactly like a
+   prompt and leave the spoken letter name intact. */
+const confirmFiles = (await readdir(join(AUDIO, 'confirm')).catch(() => []))
+  .filter((f) => f.endsWith('.mp3'))
+  .sort();
+
+for (const f of confirmFiles) {
+  const L = f.replace('.mp3', '');
+  const path = join(AUDIO, 'confirm', f);
+  const pcm = await decode(path);
+  const ev = events(pcm);
+
+  if (ev.length < 2) {
+    // can't tell the two halves apart — level it and move on
+    const out = tidy(pcm);
+    if (out && !DRY) await encode(out, path);
+    problems.push(`confirm/${L}: sound and letter name not separable, left as one`);
+    changed++;
+    continue;
+  }
+
+  const pad = Math.round(RATE * 0.008);
+  const sound = normalize(shape(pcm.slice(Math.max(0, ev[0][0] - pad), ev[0][1]), maxFor(L)));
+  const nameStart = Math.max(0, ev[1][0] - pad);
+  const name = normalize(pcm.slice(nameStart, ev[ev.length - 1][1] + pad * 3));
+
+  console.log(`  confirm/${L}  sound ${(sound.length / RATE).toFixed(2)}s + letter name`);
+  if (!DRY) await encode(concat([sound, silence(0.26), name]), path);
   changed++;
 }
 
 /* everything else: trim and level only — these are real words and sentences */
-for (const dir of ['confirm', 'word', 'name', 'praise', 'ui', 'cat']) {
+for (const dir of ['word', 'name', 'praise', 'ui', 'cat']) {
   const files = (await readdir(join(AUDIO, dir)).catch(() => [])).filter((f) => f.endsWith('.mp3'));
   for (const f of files.sort()) {
     const path = join(AUDIO, dir, f);
