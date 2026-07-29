@@ -13,6 +13,9 @@ export const clipPath = (c: Clip) => `${import.meta.env.BASE_URL}audio/${c}.mp3`
 
 const PRAISE_COUNT = 6;
 
+/** Stops are momentary by nature; they get a longer pause instead of a longer sound. */
+const STOP_LETTERS = new Set<Letter>(['B', 'C', 'D', 'G', 'J', 'K', 'P', 'Q', 'T', 'X']);
+
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -243,7 +246,8 @@ export const promptClips = (round: Round): Array<Clip | number> => {
      between, which is the whole prompt rather than a repeat of it. */
   if (round.kind === 'word') return [`word/${L}`, 280, `prompt/${L}`];
   if (round.kind === 'name') return [`name/${L}`];
-  return [`prompt/${L}`, 400, `prompt/${L}`];
+  // a burst needs more silence around it to register than a held sound does
+  return [`prompt/${L}`, STOP_LETTERS.has(L) ? 620 : 440, `prompt/${L}`];
 };
 
 export const confirmClip = (l: Letter): Clip => `confirm/${l}`;

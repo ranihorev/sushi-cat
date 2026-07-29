@@ -39,9 +39,9 @@ const TARGET_RMS = 0.17;
 const STOPS = new Set(['B', 'C', 'D', 'G', 'J', 'K', 'P', 'T', 'X', 'Q']);
 const STOP_MAX = 0.15;
 /** Held sounds get room to breathe, but not forever. */
-const CONTINUANT_MAX = 0.78;
+const CONTINUANT_MAX = 0.9;
 /** Vowels sit in between. */
-const VOWEL_MAX = 0.58;
+const VOWEL_MAX = 0.7;
 const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 
 const GAP = 0.42;
@@ -52,6 +52,11 @@ const FADE_OUT = 0.045;
 /** Spoken parts are slowed to this factor — a 4-year-old needs the letter
     name landing slowly, and TTS default pace is briskly adult. */
 const SPEECH_TEMPO = 0.82;
+/* Held sounds and vowels can genuinely be drawn out — they are steady state, so
+   stretching them just makes them longer. Stops cannot: /t/ is a burst of air,
+   and stretching a burst smears it into noise rather than slowing it down. So
+   they are left alone and given more space around them instead. */
+const PHONEME_TEMPO = 0.85;
 
 const work = await mkdtemp(join(tmpdir(), 'sushi-proc-'));
 const exists = (p) => access(p).then(() => true, () => false);
@@ -261,12 +266,13 @@ for (const f of promptFiles) {
   const L = f.replace('.mp3', '');
   const path = join(AUDIO, 'prompt', f);
   const pcm = await decode(path);
-  const one = isolate(pcm, maxFor(L));
+  let one = isolate(pcm, maxFor(L));
 
   if (!one) {
     problems.push(`${L}: silent`);
     continue;
   }
+  if (!STOPS.has(L)) one = normalize(await stretch(one, PHONEME_TEMPO));
   const secs = one.length / RATE;
   console.log(
     `  prompt/${L}  ${(pcm.length / RATE).toFixed(2)}s -> ${secs.toFixed(2)}s` +
@@ -306,7 +312,8 @@ for (const f of confirmFiles) {
   }
 
   const pad = Math.round(RATE * 0.008);
-  const sound = normalize(shape(pcm.slice(Math.max(0, ev[0][0] - pad), ev[0][1]), maxFor(L)));
+  let sound = normalize(shape(pcm.slice(Math.max(0, ev[0][0] - pad), ev[0][1]), maxFor(L)));
+  if (!STOPS.has(L)) sound = normalize(await stretch(sound, PHONEME_TEMPO));
   const nameStart = Math.max(0, ev[1][0] - pad);
   const name = normalize(pcm.slice(nameStart, ev[ev.length - 1][1] + pad * 3));
   // only the spoken half is slowed; stretching a stop burst just smears it
