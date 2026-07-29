@@ -237,11 +237,13 @@ export const audio = new AudioEngine();
 /** A prompt is a small script: clip names interleaved with pauses in ms. */
 export const promptClips = (round: Round): Array<Clip | number> => {
   const L = round.target;
-  // the prompt clip already contains the sound twice with a gap — see
-  // scripts/process-audio.mjs, which builds it that way deliberately
+  /* Word and letter-name rounds carry their own context, so the sound lands
+     once. A bare phoneme does not — /t/ is about a tenth of a second and is
+     gone before he has looked up — so those get said twice with a beat
+     between, which is the whole prompt rather than a repeat of it. */
   if (round.kind === 'word') return [`word/${L}`, 280, `prompt/${L}`];
   if (round.kind === 'name') return [`name/${L}`];
-  return [`prompt/${L}`];
+  return [`prompt/${L}`, 400, `prompt/${L}`];
 };
 
 export const confirmClip = (l: Letter): Clip => `confirm/${l}`;
