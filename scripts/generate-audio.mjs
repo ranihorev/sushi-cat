@@ -69,6 +69,26 @@ const LETTERS = {
 const ph = (arpa, fallback) =>
   `<phoneme alphabet="cmu-arpabet" ph="${arpa}">${fallback}</phoneme>`;
 
+/* Letter names, forced with arpabet. Plain text is unreliable here: "A" comes
+   out as the article, "I" as the pronoun, "O" as an exclamation. */
+const LETTER_NAMES = {
+  A: 'EY1', B: 'B IY1', C: 'S IY1', D: 'D IY1', E: 'IY1', F: 'EH1 F',
+  G: 'JH IY1', H: 'EY1 CH', I: 'AY1', J: 'JH EY1', K: 'K EY1', L: 'EH1 L',
+  M: 'EH1 M', N: 'EH1 N', O: 'OW1', P: 'P IY1', Q: 'K Y UW1', R: 'AA1 R',
+  S: 'EH1 S', T: 'T IY1', U: 'Y UW1', V: 'V IY1',
+  W: 'D AH1 B AH0 L Y UW0', X: 'EH1 K S', Y: 'W AY1', Z: 'Z IY1',
+};
+
+/* Spelled-out fallback inside each phoneme tag. If the tag is ever dropped the
+   model still reads a letter name rather than the bare character, which is how
+   H came out as "ay" with the ch missing. */
+const LETTER_SPELLED = {
+  A: 'ay', B: 'bee', C: 'see', D: 'dee', E: 'ee', F: 'eff', G: 'jee',
+  H: 'aitch', I: 'eye', J: 'jay', K: 'kay', L: 'ell', M: 'em', N: 'en',
+  O: 'oh', P: 'pee', Q: 'cue', R: 'ar', S: 'ess', T: 'tee', U: 'you',
+  V: 'vee', W: 'double-you', X: 'ex', Y: 'why', Z: 'zee',
+};
+
 const PRAISE = [
   'Yum!',
   'Mmm, delicious!',
@@ -165,6 +185,13 @@ function jobs() {
       path: `word/${L}`,
       text: `${word}!`,
       opts: { model: SENTENCE_MODEL, stability: 0.5, style: 0.3 },
+    });
+
+    // the letter's name on its own, used to open a sound prompt
+    list.push({
+      path: `letter/${L}`,
+      text: ph(LETTER_NAMES[L], LETTER_SPELLED[L]),
+      opts: { model: PHONEME_MODEL, stability: 0.8, style: 0.1, speed: 0.85 },
     });
 
     // letter-name rounds

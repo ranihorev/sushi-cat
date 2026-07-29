@@ -325,7 +325,7 @@ for (const f of confirmFiles) {
 }
 
 /* everything else: trim and level only — these are real words and sentences */
-for (const dir of ['word', 'name', 'praise', 'ui', 'cat']) {
+for (const dir of ['word', 'name', 'letter', 'praise', 'ui', 'cat']) {
   const files = (await readdir(join(AUDIO, dir)).catch(() => [])).filter((f) => f.endsWith('.mp3'));
   // the cat's own noises are already the right pace; only speech gets slowed
   const tempo = dir === 'cat' ? 1 : SPEECH_TEMPO;

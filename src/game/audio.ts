@@ -246,8 +246,10 @@ export const promptClips = (round: Round): Array<Clip | number> => {
      between, which is the whole prompt rather than a repeat of it. */
   if (round.kind === 'word') return [`word/${L}`, 280, `prompt/${L}`];
   if (round.kind === 'name') return [`name/${L}`];
-  // a burst needs more silence around it to register than a held sound does
-  return [`prompt/${L}`, STOP_LETTERS.has(L) ? 620 : 440, `prompt/${L}`];
+  /* The letter's name, then its sound: "M ... /mmm/". The name is the easy
+     part to catch and primes him for the sound, which for a stop is barely a
+     tenth of a second. Stops get a longer beat before the sound lands. */
+  return [`letter/${L}`, STOP_LETTERS.has(L) ? 460 : 340, `prompt/${L}`];
 };
 
 export const confirmClip = (l: Letter): Clip => `confirm/${l}`;
@@ -259,6 +261,7 @@ export const clipsForLetter = (l: Letter): Clip[] => [
   `confirm/${l}`,
   `word/${l}`,
   `name/${l}`,
+  `letter/${l}`,
 ];
 
 /* The cat's own voice. It carries the feedback he actually reads — a delighted
@@ -305,5 +308,5 @@ export const fallbackPrompt = (round: Round) => {
   const info = LETTERS[round.target];
   if (round.kind === 'word') return () => sayFallback(`${info.word}. ${info.word} starts with`);
   if (round.kind === 'name') return () => sayFallback(`Where is ${round.target}?`);
-  return () => sayFallback(`${info.sound.replaceAll('/', '')}`);
+  return () => sayFallback(`${round.target}. ${info.sound.replaceAll('/', '')}`);
 };
