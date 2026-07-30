@@ -2,9 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Letter } from './letters';
 import { ALL_LETTERS, BATCHES, STARTER_SET } from './letters';
 import {
+  NEEDED,
+  WINDOW,
   blankProfile,
   isSolid,
   lettersSolid,
+  recentScore,
   loadProfile,
   maybeUnlockBatch,
   noteSession,
@@ -33,10 +36,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('mastery', () => {
+describe('the recent window', () => {
   it('starts every letter unseen', () => {
     const s = statFor(blankProfile(), 'Q');
-    expect(s).toEqual({ seen: 0, correct: 0, mastery: 0, lastSeenAt: -99 });
+    expect(s).toEqual({ seen: 0, correct: 0, recent: [], lastSeenAt: -99 });
   });
 
   it('counts every showing but only credits a clean answer', () => {
@@ -48,33 +51,39 @@ describe('mastery', () => {
     expect(s.correct).toBe(1);
   });
 
-  it('moves mastery a fixed fraction of the way toward the result', () => {
-    const p = recordAnswer(blankProfile(), 'S', true);
-    expect(statFor(p, 'S').mastery).toBeCloseTo(0.34, 5);
-    const q = recordAnswer(p, 'S', true);
-    expect(statFor(q, 'S').mastery).toBeCloseTo(0.34 + 0.34 * (1 - 0.34), 5);
+  it('keeps only the last few results, oldest first', () => {
+    let p = answer(blankProfile(), 'S', WINDOW + 2);
+    p = recordAnswer(p, 'S', false);
+    expect(statFor(p, 'S').recent).toEqual([...Array(WINDOW - 1).fill(true), false]);
   });
 
-  it('forgets a slump faster than a raw ratio would', () => {
-    // ten correct then three wrong: the ratio would still be 0.77
+  it('reads the slump, not the lifetime ratio', () => {
+    // ten right then three wrong: the all-time ratio would still be 0.77
     let p = answer(blankProfile(), 'S', 10);
     p = answer(p, 'S', 3, false);
     const s = statFor(p, 'S');
     expect(s.correct / s.seen).toBeGreaterThan(0.7);
-    expect(s.mastery).toBeLessThan(0.35);
+    expect(recentScore(p, 'S')).toBeLessThan(0.3);
   });
 
-  it('needs five clean answers before a letter counts as solid', () => {
+  it(`calls a letter solid at ${NEEDED} right out of the last ${WINDOW}`, () => {
     const p = blankProfile();
-    expect(isSolid(answer(p, 'S', 4), 'S')).toBe(false);
-    expect(isSolid(answer(p, 'S', 5), 'S')).toBe(true);
+    expect(isSolid(answer(p, 'S', WINDOW), 'S')).toBe(true);
+    // one miss inside the window is forgiven; two is not
+    expect(isSolid(recordAnswer(answer(p, 'S', WINDOW), 'S', false), 'S')).toBe(true);
+    expect(isSolid(answer(answer(p, 'S', WINDOW), 'S', 2, false), 'S')).toBe(false);
   });
 
-  it('does not call a letter solid on a short perfect run', () => {
-    // seen >= 4 is a floor as well as the mastery bar
-    const p = answer(blankProfile(), 'S', 3);
-    expect(statFor(p, 'S').seen).toBe(3);
+  it('will not call a letter solid before it has been seen a full window', () => {
+    const p = answer(blankProfile(), 'S', WINDOW - 1);
     expect(isSolid(p, 'S')).toBe(false);
+  });
+
+  it('lets a single miss cost him the standing only once the window fills', () => {
+    // a good run stays good — this is what the running average used to break
+    let p = answer(blankProfile(), 'S', 10);
+    p = recordAnswer(p, 'S', false);
+    expect(isSolid(p, 'S')).toBe(true);
   });
 
   it('counts how much of the alphabet has stuck', () => {
@@ -98,10 +107,18 @@ describe('confusions', () => {
 });
 
 describe('unlocking', () => {
-  it('holds new letters back until the whole active set is solid', () => {
-    const p = answerAll(blankProfile(), STARTER_SET.slice(0, -1), 5);
+  it('holds new letters back while more than a couple are still shaky', () => {
+    const p = answerAll(blankProfile(), STARTER_SET.slice(0, -2), 5);
     expect(maybeUnlockBatch(p).unlocked).toEqual([]);
     expect(maybeUnlockBatch(p).profile.activeSet).toEqual(STARTER_SET);
+  });
+
+  /* The old rule wanted every letter solid at once. As the set grew, each
+     letter got a smaller share of the same eight rounds, so one shaky letter
+     held the whole alphabet shut and the game stopped progressing entirely. */
+  it('does not let one lagging letter hold the alphabet shut', () => {
+    const p = answerAll(blankProfile(), STARTER_SET.slice(0, -1), 5);
+    expect(maybeUnlockBatch(p).unlocked).toEqual(BATCHES[0]);
   });
 
   it('opens exactly one batch at a time', () => {
@@ -170,6 +187,39 @@ describe('persistence', () => {
     saveProfile(p as Profile);
     // one survivor is not enough to build a round, so fall back to the starter set
     expect(loadProfile().activeSet).toEqual(STARTER_SET);
+  });
+
+  /* Profiles written before the window replaced the running average carry a
+     `mastery` score instead of a result list. He keeps the standing he earned
+     rather than being sent back to the start of the alphabet. */
+  it('carries a profile written against the old mastery score across', () => {
+    const old = {
+      ...blankProfile(),
+      activeSet: ['S', 'M', 'T', 'A', 'P', 'C'] as Letter[],
+      letterStats: {
+        S: { seen: 9, correct: 9, mastery: 0.97, lastSeenAt: 4 },
+        M: { seen: 8, correct: 4, mastery: 0.2, lastSeenAt: 4 },
+      },
+    };
+    localStorage.setItem('sushi-cat.profile.v2', JSON.stringify(old));
+    const loaded = loadProfile();
+
+    expect(statFor(loaded, 'S').recent).toHaveLength(WINDOW);
+    expect(isSolid(loaded, 'S')).toBe(true);
+    expect(isSolid(loaded, 'M')).toBe(false);
+    expect(statFor(loaded, 'S').seen).toBe(9); // lifetime totals survive
+  });
+
+  it('leaves a letter he had barely started short of a full window', () => {
+    localStorage.setItem(
+      'sushi-cat.profile.v2',
+      JSON.stringify({
+        ...blankProfile(),
+        letterStats: { S: { seen: 2, correct: 2, mastery: 0.56, lastSeenAt: 1 } },
+      }),
+    );
+    expect(statFor(loadProfile(), 'S').recent).toHaveLength(2);
+    expect(isSolid(loadProfile(), 'S')).toBe(false);
   });
 
   it('fills in settings added after the profile was written', () => {

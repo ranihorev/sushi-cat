@@ -12,11 +12,16 @@ export type RoundKind =
   | 'name';
 
 export interface LetterStat {
+  /** lifetime totals — shown to the parent, never used to decide anything */
   seen: number;
   correct: number;
-  /** recency-weighted mastery 0..1 — reacts faster than a raw ratio */
-  mastery: number;
-  /** meal index when last shown, for spaced repetition */
+  /**
+   * First-try results for the last few showings, oldest first. A fixed window
+   * rather than a running average: one bad answer cannot undo a good week, and
+   * "three of his last four" is a rule a parent can check by watching.
+   */
+  recent: boolean[];
+  /** meal index when last shown */
   lastSeenAt: number;
 }
 

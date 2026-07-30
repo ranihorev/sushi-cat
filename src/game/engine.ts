@@ -1,9 +1,7 @@
 import type { Letter } from './letters';
 import { LETTERS, looksAlike, soundsAlike } from './letters';
 import type { Level, Profile, Round, RoundKind } from './types';
-import { statFor } from './store';
-
-export const ROUNDS_PER_MEAL = 8;
+import { isSolid, recentScore, statFor } from './store';
 
 export const optionCountFor = (level: Level) => (level === 1 ? 2 : level === 2 ? 3 : 4);
 
@@ -29,29 +27,32 @@ function weightedPick<T>(items: T[], weight: (t: T) => number): T {
   return items[items.length - 1];
 }
 
-/** How badly this letter needs practice right now. */
+/**
+ * How badly this letter needs practice right now: one point, plus two for every
+ * recent miss. A letter he has never missed scores 1, one he gets wrong every
+ * time scores 9, and one he has never seen scores 4 — shakier than a letter he
+ * fumbles occasionally, safer than one he cannot do at all.
+ */
 function needScore(p: Profile, l: Letter): number {
-  const s = statFor(p, l);
-  if (s.seen === 0) return 3; // brand new — show it soon
-  const weakness = 1 - s.mastery; // 0..1
-  const staleness = Math.min(1, (p.mealsCompleted - s.lastSeenAt) / 4);
-  return 0.25 + weakness * 2.2 + staleness * 0.8;
+  const { recent } = statFor(p, l);
+  if (!recent.length) return 4; // never seen — introduce it
+  return 1 + recent.filter((ok) => !ok).length * 2;
 }
 
 /**
- * Choose the target. Weighted toward weak and stale letters (roughly 60/40 weak
- * to strong), while never repeating the previous target and avoiding a third
- * appearance of anything already shown twice this meal.
+ * Choose the target: weighted toward the letters he keeps missing, never the
+ * same letter twice running, and less likely each time it has already come up
+ * this meal.
  */
 export function pickTarget(p: Profile, recent: Letter[]): Letter {
   const pool = p.activeSet.filter((l) => l !== recent[recent.length - 1]);
   const counts = new Map<Letter, number>();
   for (const l of recent) counts.set(l, (counts.get(l) ?? 0) + 1);
 
-  return weightedPick(pool.length ? pool : p.activeSet, (l) => {
-    const repeats = counts.get(l) ?? 0;
-    return needScore(p, l) * (repeats >= 2 ? 0.15 : repeats === 1 ? 0.5 : 1);
-  });
+  return weightedPick(
+    pool.length ? pool : p.activeSet,
+    (l) => needScore(p, l) / (1 + (counts.get(l) ?? 0)),
+  );
 }
 
 /**
@@ -95,22 +96,21 @@ export function buildOptions(
     chosen.push(
       weightedPick(pool, (l) => {
         const confusion = confusedWith[l] ?? 0;
-        const bias = allowLookalikes ? 1 + confusion * 1.8 : 1;
+        const bias = allowLookalikes ? 1 + confusion : 1;
         // a strong letter makes a better distractor than one he's still learning
-        return bias * (0.5 + statFor(p, l).mastery);
+        return bias * (0.5 + recentScore(p, l));
       }),
     );
   }
   return shuffle(chosen);
 }
 
-/** Sound is the backbone; word and name rounds appear once a letter is known. */
+/** Sound is the backbone; word and name rounds appear once a letter is solid. */
 function pickKind(p: Profile, target: Letter): RoundKind {
-  const s = statFor(p, target);
-  if (s.mastery < 0.6 || s.seen < 3) return 'sound';
+  if (!isSolid(p, target)) return 'sound';
   const r = Math.random();
-  if (r < 0.62) return 'sound';
-  if (r < 0.84) return 'word';
+  if (r < 0.6) return 'sound';
+  if (r < 0.85) return 'word';
   return 'name';
 }
 

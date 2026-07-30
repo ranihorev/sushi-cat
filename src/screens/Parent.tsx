@@ -3,9 +3,12 @@ import { CAT_CLIPS, UI_CLIPS, audio, clipsForLetter } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { ALL_LETTERS, LETTERS } from '../game/letters';
 import {
+  NEEDED,
+  WINDOW,
   blankProfile,
   isSolid,
   lettersSolid,
+  recentScore,
   statFor,
   unlockAllLetters,
   withNameLetters,
@@ -18,11 +21,10 @@ interface Props {
   onClose: () => void;
 }
 
-const barColor = (m: number, seen: number) => {
+const barColor = (solid: boolean, seen: number) => {
   if (seen === 0) return '#3A4A44';
-  if (m >= 0.82) return '#8FC46B';
-  if (m >= 0.5) return '#F7C744';
-  return '#E4574F';
+  if (solid) return '#8FC46B';
+  return '#F7C744';
 };
 
 export function Parent({ profile, onProfileChange, onClose }: Props) {
@@ -83,14 +85,16 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
             </button>
           </div>
           <p className="mb-2 text-xs text-white/35">
-            New letters unlock on their own, 2–3 at a time, once everything in the current set is
-            solid. Only override that if he's clearly bored.
+            A letter counts as solid once he's had it {WINDOW} times and got {NEEDED} of those
+            right first try. New letters unlock on their own, 2–3 at a time, once most of the
+            current set is solid. Only override that if he's clearly bored.
           </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
             {ALL_LETTERS.map((l) => {
               const s = statFor(profile, l);
               const active = profile.activeSet.includes(l);
-              const pct = Math.round(s.mastery * 100);
+              const right = s.recent.filter(Boolean).length;
+              const pct = Math.round(recentScore(profile, l) * 100);
               return (
                 <button
                   key={l}
@@ -107,12 +111,12 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                   <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: barColor(s.mastery, s.seen) }}
+                      style={{ width: `${pct}%`, background: barColor(isSolid(profile, l), s.seen) }}
                     />
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-white/40">
-                    <span>
-                      {s.correct}/{s.seen}
+                    <span title={`${s.correct} of ${s.seen} all time`}>
+                      {right}/{s.recent.length} recent
                     </span>
                     <button
                       type="button"

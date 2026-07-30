@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildOptions, demote, nextRound, optionCountFor, promote } from './engine';
 import type { Letter } from './letters';
 import { BATCHES, LETTERS, STARTER_SET, looksAlike, soundsAlike } from './letters';
-import { blankProfile, recordAnswer, recordConfusion, unlockAllLetters } from './store';
+import { WINDOW, blankProfile, recordAnswer, recordConfusion, unlockAllLetters } from './store';
 import type { Level, Profile } from './types';
 
 const LEVELS: Level[] = [1, 2, 3];
@@ -155,14 +155,15 @@ describe('kind of question', () => {
     for (let i = 0; i < 200; i++) expect(nextRound(p, 1, []).kind).toBe('sound');
   });
 
-  it('needs three clean answers before it varies the question', () => {
-    let two = withActive([...STARTER_SET]);
-    for (const l of STARTER_SET) for (let i = 0; i < 2; i++) two = recordAnswer(two, l, true);
-    for (let i = 0; i < 200; i++) expect(nextRound(two, 1, []).kind).toBe('sound');
+  it('waits until a letter is solid before it varies the question', () => {
+    let nearly = withActive([...STARTER_SET]);
+    for (const l of STARTER_SET)
+      for (let i = 0; i < WINDOW - 1; i++) nearly = recordAnswer(nearly, l, true);
+    for (let i = 0; i < 200; i++) expect(nextRound(nearly, 1, []).kind).toBe('sound');
 
-    const three = STARTER_SET.reduce((p, l) => recordAnswer(p, l, true), two);
+    const solid = STARTER_SET.reduce((p, l) => recordAnswer(p, l, true), nearly);
     const kinds = new Set<string>();
-    for (let i = 0; i < 300; i++) kinds.add(nextRound(three, 1, []).kind);
+    for (let i = 0; i < 300; i++) kinds.add(nextRound(solid, 1, []).kind);
     expect(kinds.size).toBeGreaterThan(1);
   });
 
