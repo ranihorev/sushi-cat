@@ -7,7 +7,9 @@ import {
   audio,
   catSound,
   confirmClip,
+  fallbackIdentify,
   fallbackPrompt,
+  identifyClips,
   promptClips,
   randomPraise,
   sayFallback,
@@ -36,7 +38,14 @@ const IDLE_NUDGE_MS = 7000;
    deliberately longer than they look like they should be on the page. */
 const PROMPT_LEAD_MS = 450; // between the new pieces appearing and the prompt
 const ROUND_GAP_MS = 1400; // after the confirmation, before the next round starts
-const RETRY_GAP_MS = 450; // after the puzzled meow, before the question comes back
+const RETRY_GAP_MS = 450; // after the refusal, before the question comes back
+const SNIFF_MS = 620; // the wrong piece travels to his nose and he smells it
+const YUCK_MS = 700; // the recoil, and the piece tumbling back to the counter
+
+/** Where a piece is held while he smells it, as a fraction of the cat's box.
+    Low enough that it sits under the muzzle instead of across the face — the
+    eyes and the nose are doing the acting, and they have to stay visible. */
+const MUZZLE = { x: 0.5, y: 0.82 };
 const GREETING_GAP_MS = 700; // after the cat's hello, before the very first prompt
 
 /* The cat says hello before the first question rather than underneath it. This
@@ -270,13 +279,49 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       return;
     }
 
-    /* wrong piece — no penalty, just a puzzled cat and another go */
+    /* A wrong piece is not eaten where it was let go — it is carried the rest of
+       the way up to the muzzle, because a cat cannot be seen to smell something
+       he is holding against his chest. The drop zone is deliberately loose, so
+       without this the piece can end up anywhere from over his eyes to off his
+       shoulder. */
+    if (el) {
+      const c = catRef.current?.getBoundingClientRect();
+      /* The slot on the counter, not where the finger is: the ref is on the
+         wrapper, and a transform on the sushi inside it does not move its
+         parent's box. */
+      const slot = el.getBoundingClientRect();
+      if (c) {
+        el.style.setProperty(
+          '--drop-x',
+          `${c.left + c.width * MUZZLE.x - (slot.left + slot.width / 2)}px`,
+        );
+        el.style.setProperty(
+          '--drop-y',
+          `${c.top + c.height * MUZZLE.y - (slot.top + slot.height / 2)}px`,
+        );
+      }
+    }
+
+    /* Wrong piece — no penalty, and no red mark. The cat takes it anyway, holds
+       it under his nose, says out loud what he was actually given, and only then
+       turns it down. Three things come out of doing it that way:
+
+       the piece goes to the cat whether it is right or wrong, so carrying it
+       over is never the thing that was mistaken;
+
+       he hears "B ... /b/" a beat before the question comes back as "M ... /mmm/",
+       which puts the two sounds side by side instead of letting the wrong one
+       disappear in silence — this is the part that teaches;
+
+       and the refusal is a cat refusing food, not a machine marking an answer. */
     const m = misses + 1;
     setMisses(m);
     setStreak(0);
-    setMood('confused');
-    audio.puzzled();
-    setPieceState({ [letter]: 'reject' });
+    setLocked(true);
+    audio.tap();
+    audio.whoosh();
+    setPieceState({ [letter]: 'sniff' });
+    setMood('sniff');
     onProfileChange((p) => recordConfusion(p, round.target, letter));
 
     if (m >= 2 && level > 1) {
@@ -285,16 +330,32 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       onProfileChange((p) => ({ ...p, level: down }));
     }
 
-    // the cat reacts first, then the prompt comes back — in that order
-    void audio.speak([catSound('curious')]).then(() => {
+    after(260, () => audio.sniff());
+
+    after(SNIFF_MS, async () => {
+      /* One chain again: the enquiring mrrp, then the naming, then the refusal.
+         Fired separately these three talk over each other, and what is left is
+         noise at the exact moment he is trying to work out what he got wrong. */
+      await audio.speak(
+        [catSound('curious'), 260, ...identifyClips(round, letter)],
+        fallbackIdentify(round, letter),
+      );
       if (!alive.current) return;
-      setMood('idle');
-      setPieceState(m >= 2 ? { [round.target]: 'hint' } : {});
-      /* On the second miss the right piece starts glowing, so the glow does the
-         pointing. Saying "this one" on top of it just added a phrase he has to
-         decode; replaying the sound is the thing that actually teaches. The beat
-         first gives the glow a moment to land before the sound arrives. */
-      return audio.speak([RETRY_GAP_MS, ...promptClips(round)], fallbackPrompt(round));
+
+      setMood('yuck');
+      audio.yuck();
+      setPieceState({ [letter]: 'spit' });
+
+      after(YUCK_MS, () => {
+        setMood('idle');
+        setLocked(false);
+        setPieceState(m >= 2 ? { [round.target]: 'hint' } : {});
+        /* On the second miss the right piece starts glowing, so the glow does the
+           pointing. Saying "this one" on top of it just added a phrase he has to
+           decode; replaying the sound is the thing that actually teaches. The beat
+           first gives the glow a moment to land before the sound arrives. */
+        void audio.speak([RETRY_GAP_MS, ...promptClips(round)], fallbackPrompt(round));
+      });
     });
   };
 
@@ -345,6 +406,10 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
   const fullness = eaten.length / total;
   const optionCount = optionCountFor(level);
   const wordHint = round.kind === 'word' ? LETTERS[round.target].word : null;
+
+  /* A piece that has left the counter has to stay in front of the cat, or the
+     whole refusal happens behind his head where none of it can be seen. */
+  const atTheCat = Object.values(pieceState).some((s) => s === 'sniff' || s === 'spit');
 
   const pieces = useMemo(
     () =>
@@ -453,7 +518,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           over the cat rather than behind it. */}
       <div
         className="relative h-[clamp(78px,13vh,132px)] shrink-0"
-        style={{ zIndex: drag ? 40 : 10 }}
+        style={{ zIndex: drag || atTheCat ? 40 : 10 }}
       >
         <Counter />
         {/* click-through: the row is far taller than the sushi drawn in it, and

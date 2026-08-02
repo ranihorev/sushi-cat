@@ -1,6 +1,15 @@
 import { memo, useEffect, useState } from 'react';
 
-export type Mood = 'idle' | 'anticipate' | 'eating' | 'confused' | 'happy' | 'asleep';
+export type Mood =
+  | 'idle'
+  | 'anticipate'
+  | 'eating'
+  /** leaning over a piece he has been handed, having a good smell of it */
+  | 'sniff'
+  /** he has smelled it, and he does not want it */
+  | 'yuck'
+  | 'happy'
+  | 'asleep';
 
 interface Props {
   /** 0..1 — the cat rounds out as the meal goes on */
@@ -32,7 +41,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
 
   // blink on a human-ish irregular rhythm, sometimes twice
   useEffect(() => {
-    if (!restful && mood !== 'confused') return;
+    if (!restful) return;
     let stop = false;
     let timer: number;
 
@@ -60,7 +69,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
       stop = true;
       clearTimeout(timer);
     };
-  }, [restful, mood]);
+  }, [restful]);
 
   // an ear twitch or a tail flick now and then
   useEffect(() => {
@@ -98,34 +107,38 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
   const eating = mood === 'eating';
   const anticipating = mood === 'anticipate';
   const asleep = mood === 'asleep';
-  const confused = mood === 'confused';
+  const sniffing = mood === 'sniff';
+  const yuck = mood === 'yuck';
   const happy = mood === 'happy';
 
   const grow = 1 + fullness * 0.16;
   const px = look * 3.2;
-  const eyesClosed = asleep || happy || (eating && chewing) || blinking;
+  const eyesClosed = asleep || happy || yuck || (eating && chewing) || blinking;
 
   const Eye = ({ cx }: { cx: number }) => {
     if (eyesClosed) {
-      // closed and curving up when pleased, flat when just blinking
-      const dir = happy || eating || asleep ? -1 : 0.15;
+      /* Closed and curving up when pleased. Squeezed the other way for `yuck`,
+         which is the difference between a cat enjoying itself and a cat trying
+         not to taste something. */
+      const dir = yuck ? 1 : happy || eating || asleep ? -1 : 0.15;
       return (
         <path
-          d={`M ${cx - 9} 101 q 9 ${8 * dir} 18 0`}
+          d={`M ${cx - 9} ${yuck ? 103 : 101} q 9 ${8 * dir} 18 0`}
           stroke={INK}
-          strokeWidth="4"
+          strokeWidth={yuck ? 4.6 : 4}
           strokeLinecap="round"
           fill="none"
         />
       );
     }
-    // pupils widen when a piece is on the way in
+    // pupils widen when a piece is on the way in, and drop to the piece he sniffs
     const r = anticipating ? 1.18 : 1;
+    const cy = sniffing ? 105 : 100;
     return (
       <g>
-        <ellipse cx={cx + px} cy="100" rx={8.5 * r} ry={10 * r} fill={INK} />
-        <circle cx={cx + px + 3} cy={96} r={3 * r} fill="#fff" />
-        <circle cx={cx + px - 2.5} cy="103.5" r="1.5" fill="#fff" opacity="0.75" />
+        <ellipse cx={cx + px} cy={cy} rx={8.5 * r} ry={10 * r} fill={INK} />
+        <circle cx={cx + px + 3} cy={cy - 4} r={3 * r} fill="#fff" />
+        <circle cx={cx + px - 2.5} cy={cy + 3.5} r="1.5" fill="#fff" opacity="0.75" />
       </g>
     );
   };
@@ -137,14 +150,30 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
     </g>
   ) : anticipating ? (
     <ellipse cx="120" cy="126" rx="11" ry="10" fill="#7A2E33" />
-  ) : confused ? (
-    <path
-      d="M 110 126 q 5 -5 10 0 q 5 5 10 0"
-      stroke={INK}
-      strokeWidth="3"
-      fill="none"
-      strokeLinecap="round"
-    />
+  ) : sniffing ? (
+    // pursed, the way a mouth goes when the nose is doing the work
+    <ellipse cx="120" cy="126" rx="5.5" ry="4.5" fill="#7A2E33" />
+  ) : yuck ? (
+    /* Open, flat, and with the tongue right out. This is the one pose in the
+       whole game that says "no" without a word in it, so it is drawn big. */
+    <g>
+      <path d="M 104 122 q 16 12 32 0 q -4 14 -16 14 q -12 0 -16 -14 Z" fill="#7A2E33" />
+      <path
+        d="M 113 133 q 7 -3 14 0 q 1 14 -7 15 q -8 -1 -7 -15 Z"
+        fill="#F4837E"
+        stroke="#D9605C"
+        strokeWidth="1.4"
+      />
+      <line
+        x1="120"
+        y1="138"
+        x2="120"
+        y2="146"
+        stroke="#D9605C"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </g>
   ) : happy ? (
     <g>
       <path d="M 106 122 q 14 16 28 0" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" />
@@ -165,9 +194,11 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
       ? 'cat-sleep'
       : happy
         ? 'cat-bounce'
-        : anticipating
-          ? 'cat-lean'
-          : 'cat-bob';
+        : yuck
+          ? 'cat-recoil'
+          : anticipating || sniffing
+            ? 'cat-lean'
+            : 'cat-bob';
 
   return (
     <svg viewBox="0 0 240 210" className="h-full w-full overflow-visible">
@@ -231,21 +262,30 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
               ellipse here reads as a grey smudge on the chest. */}
           <ellipse cx="120" cy="118" rx="58" ry="48" fill="url(#chin)" />
 
-          {/* head — tilts when puzzled, cranes forward when food is coming */}
+          {/* head — cranes forward over food, shakes itself clear of a bad smell */}
           <g
-            className={confused ? 'cat-tilt' : anticipating ? 'cat-crane' : undefined}
+            className={yuck ? 'cat-headshake' : anticipating || sniffing ? 'cat-crane' : undefined}
             style={{ transformOrigin: '120px 140px' }}
           >
-            {/* ears, behind the head so their bases disappear into it */}
+            {/* ears, behind the head so their bases disappear into it. They go
+                flat against the head for `yuck` — the tell every child who has
+                met a cat already knows how to read. */}
             <g
-              className={fidget === 'ear' ? 'cat-ear-twitch' : undefined}
+              className={
+                yuck ? 'cat-ear-flat-l' : fidget === 'ear' ? 'cat-ear-twitch' : undefined
+              }
               style={{ transformOrigin: '80px 76px' }}
             >
               <path d="M 78 80 L 63 26 L 112 58 Z" fill="url(#fur)" />
               <path d="M 85 73 L 75 40 L 104 60 Z" fill={BLUSH} />
             </g>
-            <path d="M 162 80 L 177 26 L 128 58 Z" fill="url(#fur)" />
-            <path d="M 155 73 L 165 40 L 136 60 Z" fill={BLUSH} />
+            <g
+              className={yuck ? 'cat-ear-flat-r' : undefined}
+              style={{ transformOrigin: '160px 76px' }}
+            >
+              <path d="M 162 80 L 177 26 L 128 58 Z" fill="url(#fur)" />
+              <path d="M 155 73 L 165 40 L 136 60 Z" fill={BLUSH} />
+            </g>
 
             {/* head */}
             <ellipse cx="120" cy="98" rx="55" ry="49" fill="url(#fur)" />
@@ -277,9 +317,21 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
               opacity={happy || eating ? 0.78 : 0.42 + fullness * 0.25}
             />
 
-            {/* nose */}
-            <path d="M 114 114 L 126 114 L 120 121 Z" fill="#FF8A65" />
-            <line x1="120" y1="121" x2="120" y2="124" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+            {/* nose — it twitches while he works out what he has been given */}
+            <g
+              className={sniffing ? 'cat-nose-twitch' : undefined}
+              style={{ transformOrigin: '120px 117px' }}
+            >
+              <path d="M 114 114 L 126 114 L 120 121 Z" fill="#FF8A65" />
+              <line x1="120" y1="121" x2="120" y2="124" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+            </g>
+            {/* the wrinkle over the nose that comes with the tongue */}
+            {yuck && (
+              <g stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.55">
+                <path d="M 112 108 q 8 -5 16 0" />
+                <path d="M 114 103 q 6 -4 12 0" />
+              </g>
+            )}
 
             {mouth}
 
@@ -306,19 +358,22 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
               <text className="cat-zzz cat-zzz-2" x="203" y="40" fontSize="16">z</text>
             </g>
           )}
-          {confused && (
-            <text
-              className="cat-pop"
-              x="188"
-              y="56"
-              fontSize="40"
-              fontWeight="900"
-              fill="#F7C744"
-              fontFamily="ui-rounded, system-ui"
-            >
-              ?
-            </text>
+          {/* the curls of smell coming off whatever is under his nose. Kept
+              clear of the head, where they would cross the headband. */}
+          {sniffing && (
+            <g stroke="#BFE3D0" strokeLinecap="round" fill="none">
+              <path className="cat-whiff" d="M 184 120 q 9 -9 0 -18 q -9 -9 0 -18" strokeWidth="3" />
+              <path
+                className="cat-whiff cat-whiff-2"
+                d="M 199 116 q 7 -7 0 -14 q -7 -7 0 -14"
+                strokeWidth="2.4"
+                opacity="0.75"
+              />
+            </g>
           )}
+          {/* No cross, no red mark, nothing that scores him. The flat ears and
+              the tongue are the whole message, and they read as a cat being a
+              cat rather than as the game telling him he is wrong. */}
           {happy && (
             <g>
               <g className="cat-sparkle" fill="#F7C744">

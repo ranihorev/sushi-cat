@@ -212,9 +212,17 @@ class AudioEngine {
     [659, 784, 988].forEach((f, i) => this.blip(f, 0.16, 'sine', 0.11, i * 0.075));
   }
 
-  puzzled() {
-    this.blip(392, 0.14, 'sine', 0.08);
-    this.blip(330, 0.2, 'sine', 0.07, 0.13);
+  /** two short breaths through the nose, over the piece he has been handed */
+  sniff() {
+    this.noise(0.05, 0.09, 0, 2400, 2);
+    this.noise(0.05, 0.08, 0.12, 2700, 2);
+  }
+
+  /** the flat, buzzy "blegh" of a cat who has been given the wrong fish */
+  yuck() {
+    this.blip(233, 0.16, 'sawtooth', 0.055);
+    this.blip(175, 0.26, 'sawtooth', 0.045, 0.14);
+    this.noise(0.2, 0.045, 0.16, 500, 0.9);
   }
 
   fanfare() {
@@ -251,6 +259,19 @@ export const promptClips = (round: Round): Array<Clip | number> => {
      tenth of a second. Stops get a longer beat before the sound lands. */
   return [`letter/${L}`, STOP_LETTERS.has(L) ? 460 : 340, `prompt/${L}`];
 };
+
+/**
+ * What the cat says about the piece he was actually handed. It is built to the
+ * same shape as the prompt — "B ... /b/" — so that the wrong answer and the
+ * question sit side by side and can be told apart. A wrong piece that vanishes
+ * in silence teaches nothing; naming it is the whole point of the mistake.
+ *
+ * A letter-name round is about names alone, so the phoneme is only noise there.
+ */
+export const identifyClips = (round: Round, given: Letter): Array<Clip | number> =>
+  round.kind === 'name'
+    ? [`letter/${given}`]
+    : [`letter/${given}`, STOP_LETTERS.has(given) ? 460 : 340, `prompt/${given}`];
 
 export const confirmClip = (l: Letter): Clip => `confirm/${l}`;
 
@@ -303,6 +324,11 @@ export function sayFallback(text: string, rate = 0.8) {
   u.pitch = 1.15;
   window.speechSynthesis.speak(u);
 }
+
+export const fallbackIdentify = (round: Round, given: Letter) => () => {
+  if (round.kind === 'name') return sayFallback(`${given}?`, 0.85);
+  return sayFallback(`${given}. ${LETTERS[given].sound.replaceAll('/', '')}?`, 0.85);
+};
 
 export const fallbackPrompt = (round: Round) => {
   const info = LETTERS[round.target];

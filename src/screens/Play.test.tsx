@@ -260,7 +260,7 @@ describe('feeding the cat', () => {
 });
 
 describe('a wrong piece', () => {
-  it('is never punished — the cat just looks puzzled and asks again', async () => {
+  it('is never punished — the cat turns it down and asks again', async () => {
     await start();
     const target = targetOnScreen();
     const wrong = distractorOnScreen();
@@ -272,6 +272,73 @@ describe('a wrong piece', () => {
     expect(playLog.some((c) => CAT_CLIPS.includes(c))).toBe(true);
     expect(playLog).not.toContain(`confirm/${wrong}`);
     expect(playLog.slice(-2)).toEqual([`letter/${target}`, `prompt/${target}`]);
+  });
+
+  /* The whole point of the refusal. A wrong piece that disappears in silence
+     teaches nothing; hearing "B ... /b/" a beat before the question comes back
+     as "M ... /mmm/" puts the two sounds next to each other. */
+  it('says out loud what he was actually given', async () => {
+    await start();
+    const target = targetOnScreen();
+    const wrong = distractorOnScreen();
+    playLog.length = 0;
+
+    dragTo(wrong, ON_CAT);
+    await settleRound();
+
+    expect(playLog).toContain(`letter/${wrong}`);
+    expect(playLog).toContain(`prompt/${wrong}`);
+    // named first, then the question again — never the other way round
+    expect(playLog.indexOf(`prompt/${wrong}`)).toBeLessThan(playLog.indexOf(`prompt/${target}`));
+  });
+
+  it('takes the piece to his nose before he turns it down', async () => {
+    await start();
+    const wrong = distractorOnScreen();
+
+    dragTo(wrong, ON_CAT);
+    await tick(300);
+    expect(piece(wrong).className).toContain('sushi-sniff');
+  });
+
+  it('gives the piece back to the counter afterwards', async () => {
+    await start();
+    const wrong = distractorOnScreen();
+
+    dragTo(wrong, ON_CAT);
+    await settleRound();
+
+    expect(piece(wrong).className).not.toContain('sushi-sniff');
+    expect(piece(wrong).className).not.toContain('sushi-spit');
+  });
+
+  /* He has the piece in his mouth. Letting a second one be dropped on top of it
+     runs two refusals at once, and both of them are then unintelligible. */
+  it('cannot be fed again while he still has the last piece', async () => {
+    await start({ level: 3 });
+    const target = targetOnScreen();
+    const wrong = optionsOnScreen().filter((l) => l !== target);
+
+    dragTo(wrong[0], ON_CAT);
+    await tick(300);
+    playLog.length = 0;
+
+    dragTo(wrong[1], ON_CAT);
+    await tick(300);
+    expect(playLog).not.toContain(`letter/${wrong[1]}`);
+    expect(profileSeen.confusions[target]).toEqual({ [wrong[0]]: 1 });
+  });
+
+  it('lets him answer again once the piece is back on the counter', async () => {
+    await start();
+    const target = targetOnScreen();
+
+    dragTo(distractorOnScreen(), ON_CAT);
+    await settleRound();
+    dragTo(target, ON_CAT);
+    await settleRound();
+
+    expect(playLog).toContain(`confirm/${target}`);
   });
 
   it('keeps the same question up, with the same pieces', async () => {

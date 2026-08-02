@@ -9,6 +9,7 @@ import {
   clipsForLetter,
   confirmClip,
   fallbackPrompt,
+  identifyClips,
   promptClips,
   randomPraise,
 } from './audio';
@@ -55,6 +56,43 @@ describe('what a prompt says', () => {
 
   it('confirms with the sound and the letter together', () => {
     expect(confirmClip('M')).toBe('confirm/M');
+  });
+});
+
+/* The cat names the wrong piece before he refuses it. Said in the same shape as
+   the question, the two land next to each other — "B ... /b/" against
+   "M ... /mmm/" — and the difference between them is the lesson. */
+describe('what the cat says about a wrong piece', () => {
+  it('names it the same way the question names what it wants', () => {
+    expect(identifyClips(round('sound', 'M'), 'B')).toEqual([
+      'letter/B',
+      expect.any(Number),
+      'prompt/B',
+    ]);
+  });
+
+  it('gives a stop the same longer beat the prompt gives it', () => {
+    const [, held] = identifyClips(round('sound', 'M'), 'F') as [string, number, string];
+    const [, stop] = identifyClips(round('sound', 'M'), 'B') as [string, number, string];
+    expect(stop).toBeGreaterThan(held);
+  });
+
+  it('names a word round the same way — the piece is still a letter', () => {
+    expect(identifyClips(round('word', 'M'), 'B')).toEqual([
+      'letter/B',
+      expect.any(Number),
+      'prompt/B',
+    ]);
+  });
+
+  /* A name round asks which letter is which by name. The phoneme has no part in
+     that question, so putting it in the answer is a second thing to decode. */
+  it('leaves the sound out of a name round', () => {
+    expect(identifyClips(round('name', 'M'), 'B')).toEqual(['letter/B']);
+  });
+
+  it('only ever names the piece he gave, never the one that was asked for', () => {
+    expect(identifyClips(round('sound', 'M'), 'B')).not.toContain('prompt/M');
   });
 
   it('knows every clip a letter can need, so it can all be cached up front', () => {

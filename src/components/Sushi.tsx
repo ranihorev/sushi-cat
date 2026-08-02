@@ -2,7 +2,15 @@ import { memo } from 'react';
 import type { Letter } from '../game/letters';
 import { LETTERS, TOPPING_COLORS } from '../game/letters';
 
-export type PieceState = 'rest' | 'swallow' | 'reject' | 'hint' | 'hop';
+export type PieceState =
+  | 'rest'
+  | 'swallow'
+  /** held under the cat's nose while he smells it */
+  | 'sniff'
+  /** tumbling back to the counter after he has refused it */
+  | 'spit'
+  | 'hint'
+  | 'hop';
 
 interface Props {
   letter: Letter;
@@ -119,7 +127,8 @@ function Topping({ kind }: { kind: keyof typeof TOPPING_COLORS }) {
 function SushiPiece({ letter, state, index, disabled, drag, over, onGrab }: Props) {
   const cls =
     state === 'swallow' ? 'sushi-swallow'
-    : state === 'reject' ? 'sushi-reject'
+    : state === 'sniff' ? 'sushi-sniff'
+    : state === 'spit' ? 'sushi-spit'
     : state === 'hint' ? 'sushi-hint'
     : state === 'hop' ? 'sushi-hop'
     : 'sushi-rest';

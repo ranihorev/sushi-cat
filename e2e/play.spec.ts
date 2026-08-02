@@ -126,10 +126,11 @@ test.describe('a round', () => {
 
     await feed(page, wrong);
 
-    // the cat looks puzzled, then the same question comes back round
+    // he smells it, names what he was given, turns it down, and asks again
     await expect
       .poll(async () => (await playedClips(page)).slice(-2), { timeout: 12_000 })
       .toEqual([`letter/${target}`, `prompt/${target}`]);
+    expect(await playedClips(page)).toContain(`letter/${wrong}`);
     expect(await playedClips(page)).not.toContain(`confirm/${wrong}`);
     await expect(page.locator('[aria-label="0 of 8 eaten"]')).toBeVisible();
   });
