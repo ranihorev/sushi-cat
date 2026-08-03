@@ -114,7 +114,9 @@ test.describe('a round', () => {
 
     await expect
       .poll(() => playedClips(page), { timeout: 12_000 })
-      .toEqual(expect.arrayContaining(['cat/nom', `confirm/${target}`]));
+      .toEqual(expect.arrayContaining(['cat/nom']));
+    // the letter is not read back to him — the cat eating it is the answer
+    expect(await playedClips(page)).not.toContain(`confirm/${target}`);
     await expect(page.locator('[aria-label="1 of 8 eaten"]')).toBeVisible();
   });
 
@@ -131,7 +133,7 @@ test.describe('a round', () => {
       .poll(async () => (await playedClips(page)).slice(-2), { timeout: 12_000 })
       .toEqual([`letter/${target}`, `prompt/${target}`]);
     expect(await playedClips(page)).toContain(`letter/${wrong}`);
-    expect(await playedClips(page)).not.toContain(`confirm/${wrong}`);
+    expect(await playedClips(page)).not.toContain('cat/nom'); // he never swallowed it
     await expect(page.locator('[aria-label="0 of 8 eaten"]')).toBeVisible();
   });
 

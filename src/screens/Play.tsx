@@ -6,13 +6,11 @@ import { Sushi, type PieceState } from '../components/Sushi';
 import {
   audio,
   catSound,
-  confirmClip,
   fallbackIdentify,
   fallbackPrompt,
   identifyClips,
   promptClips,
   randomPraise,
-  sayFallback,
 } from '../game/audio';
 import { demote, nextRound, optionCountFor, promote } from '../game/engine';
 import type { Letter } from '../game/letters';
@@ -30,14 +28,13 @@ interface Props {
 const IDLE_NUDGE_MS = 7000;
 
 /* Pacing.
-   Everything he hears at a round boundary is letters. The confirmation is
-   "/mmm/ ... M!" and the next prompt is "T ... /t/" — four letter sounds in a
-   row, and with only a quarter-second between them they run together into one
-   stream with no telling where the answer ended and the new question began.
-   Silence is the only thing marking that boundary, so these gaps are
-   deliberately longer than they look like they should be on the page. */
+   A right answer is not read back to him. He heard the letter in the question,
+   he found it, and the cat ate it — saying "/mmm/ ... M!" on top of that told
+   him nothing he did not already know and put two more letter sounds between
+   him and the next question. The cat's delighted meow is the whole reply, and
+   silence is what marks the boundary after it. */
 const PROMPT_LEAD_MS = 450; // between the new pieces appearing and the prompt
-const ROUND_GAP_MS = 1400; // after the confirmation, before the next round starts
+const ROUND_GAP_MS = 600; // after the cat's reply, before the next round starts
 const RETRY_GAP_MS = 450; // after the refusal, before the question comes back
 const SNIFF_MS = 620; // the wrong piece travels to his nose and he smells it
 const YUCK_MS = 700; // the recoil, and the piece tumbling back to the counter
@@ -225,11 +222,10 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
 
       after(760, async () => {
         /* One ordered chain, not a pile of timers. Chewing, then the cat's
-           reaction, then the confirmation, then maybe a word of praise — each
-           waits for the last to finish, and the next round only begins when
-           the whole thing is done. Firing these independently meant the meow
-           talked over the confirmation and the praise talked over the next
-           prompt. */
+           reaction, then maybe a word of praise — each waits for the last to
+           finish, and the next round only begins when the whole thing is done.
+           Firing these independently meant the meow talked over the praise and
+           the praise talked over the next prompt. */
         await audio.speak(['cat/nom']);
         if (!alive.current) return;
 
@@ -248,16 +244,13 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           after(1400, () => setCheer(null));
         }
 
+        /* No reading the letter back to him — just the cat being pleased, and
+           now and then a word for it. */
         const praise = Math.random() < 0.35;
-        await audio.speak(
-          [
-            catSound(nextStreak >= 3 ? 'excited' : 'happy'),
-            160,
-            confirmClip(letter),
-            ...(praise ? [320, randomPraise()] : []),
-          ],
-          () => sayFallback(`${LETTERS[letter].sound.replaceAll('/', '')}. ${letter}!`, 0.85),
-        );
+        await audio.speak([
+          catSound(nextStreak >= 3 ? 'excited' : 'happy'),
+          ...(praise ? [320, randomPraise()] : []),
+        ]);
         if (!alive.current) return;
 
         if (nextEaten.length >= total) {

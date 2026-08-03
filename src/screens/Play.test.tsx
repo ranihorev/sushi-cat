@@ -211,8 +211,24 @@ describe('feeding the cat', () => {
     await settleRound();
 
     expect(playLog).toContain('cat/nom');
-    expect(playLog).toContain(`confirm/${target}`);
+    expect(playLog.some((c) => CAT_CLIPS.includes(c))).toBe(true);
     expect(profileSeen.letterStats[target]).toMatchObject({ seen: 1, correct: 1 });
+  });
+
+  /* He heard the letter in the question and he found it. Reading it back to him
+     afterwards taught him nothing and put two more letter sounds between him and
+     the next question, which is what made the game drag. */
+  it('does not read the letter back to him', async () => {
+    await start();
+    const target = targetOnScreen();
+    playLog.length = 0;
+
+    dragTo(target, ON_CAT);
+    await tick(1600); // the cat has chewed and answered, the next round has not begun
+
+    expect(playLog).not.toContain(`confirm/${target}`);
+    expect(playLog).not.toContain(`letter/${target}`);
+    expect(playLog).not.toContain(`prompt/${target}`);
   });
 
   it('asks a new question afterwards', async () => {
@@ -222,20 +238,22 @@ describe('feeding the cat', () => {
     expect(optionsOnScreen()).toContain(targetOnScreen());
   });
 
-  /* The confirmation is "/mmm/ ... M!" and the next prompt is "T ... /t/". Back
-     to back they are four letter sounds in a row with nothing to separate them,
-     which is exactly what made the game confusing to listen to. The silence in
-     between is the only thing marking where one question ended. */
-  it('leaves a silence between the answer and the next question', async () => {
+  /* Silence is the only thing marking where one question ended and the next
+     began. Without it the cat's reply and the new prompt run together into one
+     stream that is hard to follow. */
+  it('leaves a silence between the cat and the next question', async () => {
+    // 0.5 is above the praise threshold, so the reply is the meow alone and its
+    // length is fixed — otherwise the quiet stretch moves from run to run
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
     await start();
     const target = targetOnScreen();
 
     dragTo(target, ON_CAT);
-    await tick(2000); // long enough for the whole confirmation to have played
-    expect(playLog).toContain(`confirm/${target}`);
+    await tick(1200); // chewed, and the cat has said his piece
+    expect(playLog.some((c) => CAT_CLIPS.includes(c))).toBe(true);
     playLog.length = 0;
 
-    await tick(700);
+    await tick(600);
     expect(playLog).toEqual([]);
 
     await settleRound();
@@ -270,7 +288,7 @@ describe('a wrong piece', () => {
     await settleRound();
 
     expect(playLog.some((c) => CAT_CLIPS.includes(c))).toBe(true);
-    expect(playLog).not.toContain(`confirm/${wrong}`);
+    expect(playLog).not.toContain('cat/nom'); // he never swallowed it
     expect(playLog.slice(-2)).toEqual([`letter/${target}`, `prompt/${target}`]);
   });
 
@@ -338,7 +356,7 @@ describe('a wrong piece', () => {
     dragTo(target, ON_CAT);
     await settleRound();
 
-    expect(playLog).toContain(`confirm/${target}`);
+    expect(profileSeen.letterStats[target]).toMatchObject({ seen: 1 });
   });
 
   it('keeps the same question up, with the same pieces', async () => {
@@ -467,7 +485,7 @@ describe('under StrictMode', () => {
     dragTo(target, ON_CAT);
     await settleRound();
 
-    expect(playLog).toContain(`confirm/${target}`);
+    expect(playLog).toContain('cat/nom');
     expect(profileSeen.letterStats[target]).toMatchObject({ seen: 1, correct: 1 });
     expect(screen.getByLabelText(/1 of 8/)).toBeTruthy();
   });
