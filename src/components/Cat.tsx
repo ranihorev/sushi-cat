@@ -11,12 +11,49 @@ export type Mood =
   | 'happy'
   | 'asleep';
 
+/**
+ * What the cat does after he swallows.
+ *
+ * The single loudest complaint about the old game was that every mouthful was
+ * identical: one chomp, one pleased face, next question. The reaction is the
+ * prize, so there has to be more than one of them — a child comes back to find
+ * out which one he gets, not to be told he was right again.
+ *
+ * Every reaction is built from the same head and body. They differ in the eyes,
+ * the mouth, one animation and one small piece of overlay art, which is what
+ * keeps sixteen of them affordable.
+ */
+export const REACTIONS = [
+  'hiccup',
+  'burp',
+  'spicy',
+  'balloon',
+  'sleepy',
+  'hearts',
+  'stars',
+  'dizzy',
+  'bubble',
+  'gulp',
+  'fishbone',
+  'lick',
+  'dance',
+  'huge',
+  'sneeze',
+  'float',
+] as const;
+
+export type Reaction = (typeof REACTIONS)[number];
+
 interface Props {
   /** 0..1 — the cat rounds out as the meal goes on */
   fullness: number;
   mood: Mood;
   /** -1..1 — which way the eyes drift */
   look?: number;
+  /** which of the sixteen he does after swallowing — only read while `happy` */
+  reaction?: Reaction | null;
+  /** he is being stroked: eyes shut, a lean into the finger, hearts */
+  petting?: boolean;
 }
 
 const FUR = '#FFF7EA';
@@ -25,6 +62,21 @@ const NORI = '#20302A';
 const INK = '#20302A';
 const BLUSH = '#FFB3A0';
 
+/** The plain pleased face, for the beats where no reaction is running. */
+const PleasedExtras = () => (
+  <g>
+    <g className="cat-sparkle" fill="#F7C744">
+      <path d="M 186 52 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 l 10 -4 Z" />
+    </g>
+    <g className="cat-sparkle cat-sparkle-2" fill="#F7C744">
+      <path d="M 46 66 l 3 7 l 7 3 l -7 3 l -3 7 l -3 -7 l -7 -3 l 7 -3 Z" />
+    </g>
+    <g className="cat-heart" fill="#FF8A65">
+      <path d="M 152 44 c -4 -6 -14 -3 -14 5 c 0 7 9 12 14 17 c 5 -5 14 -10 14 -17 c 0 -8 -10 -11 -14 -5 Z" />
+    </g>
+  </g>
+);
+
 /* One SVG, driven entirely by { fullness, mood }. Nothing about the game logic
    reaches in here — swapping this for illustrated art later means replacing this
    file and nothing else.
@@ -32,12 +84,15 @@ const BLUSH = '#FFB3A0';
    The small idle behaviours (blinking, ear twitches, tail flicks) are what stop
    it reading as a static picture. They run on their own timers so the game
    never has to think about them. */
-function CatArt({ fullness, mood, look = 0 }: Props) {
+function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: Props) {
   const [blinking, setBlinking] = useState(false);
   const [fidget, setFidget] = useState<'none' | 'ear' | 'tail'>('none');
   const [chewing, setChewing] = useState(false);
 
-  const restful = mood === 'idle' || mood === 'anticipate';
+  const restful = (mood === 'idle' || mood === 'anticipate') && !petting;
+
+  /** the reaction only exists in the pleased beat right after he swallows */
+  const rx: Reaction | null = mood === 'happy' ? reaction : null;
 
   // blink on a human-ish irregular rhythm, sometimes twice
   useEffect(() => {
@@ -111,11 +166,75 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
   const yuck = mood === 'yuck';
   const happy = mood === 'happy';
 
-  const grow = 1 + fullness * 0.16;
+  /* He is visibly rounder by the end of a meal. At the old 0.16 the change was
+     spread so thinly across eight mouthfuls that nobody ever saw it, and
+     "look what you did" is the clearest thing this channel can say. */
+  const grow = (1 + fullness * 0.3) * (rx === 'huge' ? 1.16 : 1);
   const px = look * 3.2;
-  const eyesClosed = asleep || happy || yuck || (eating && chewing) || blinking;
+
+  /* Some reactions need the eyes open, and a few replace them altogether. */
+  const eyesWide =
+    rx === 'hiccup' || rx === 'sneeze' || rx === 'huge' || rx === 'balloon' || rx === 'spicy';
+  const eyesDrawn = rx === 'hearts' || rx === 'stars' || rx === 'dizzy';
+  const eyesClosed =
+    !eyesWide &&
+    !eyesDrawn &&
+    (asleep || petting || happy || yuck || (eating && chewing) || blinking);
 
   const Eye = ({ cx }: { cx: number }) => {
+    if (rx === 'hearts') {
+      return (
+        <path
+          className="cat-eye-pulse"
+          d={`M ${cx} ${109} c -5 -8 -16 -4 -16 5 c 0 7 10 12 16 17 c 6 -5 16 -10 16 -17 c 0 -9 -11 -13 -16 -5 Z`}
+          fill="#FF5A7A"
+          style={{ transformOrigin: `${cx}px 106px` }}
+        />
+      );
+    }
+    if (rx === 'stars') {
+      return (
+        <path
+          className="cat-eye-pulse"
+          d={`M ${cx} 86 l 4.5 12 l 12.5 0.6 l -9.8 8 l 3.4 12.2 l -10.6 -7 l -10.6 7 l 3.4 -12.2 l -9.8 -8 l 12.5 -0.6 Z`}
+          fill="#F7C744"
+          style={{ transformOrigin: `${cx}px 100px` }}
+        />
+      );
+    }
+    if (rx === 'dizzy') {
+      return (
+        <g
+          className="cat-spin-slow"
+          style={{ transformOrigin: `${cx}px 100px` }}
+          stroke={INK}
+          strokeWidth="2.6"
+          fill="none"
+          strokeLinecap="round"
+        >
+          <path
+            d={`M ${cx} 100 m 0 -2 a 2 2 0 1 1 -2 2 a 5 5 0 1 0 5 -5 a 8.5 8.5 0 1 0 -8.5 8.5`}
+          />
+        </g>
+      );
+    }
+    if (rx === 'sleepy') {
+      // half shut, the lid coming down over the top of the eye
+      return (
+        <g>
+          <path
+            d={`M ${cx - 9} 100 a 9 9 0 0 0 18 0 Z`}
+            fill={INK}
+          />
+          <path
+            d={`M ${cx - 10} 100 h 20`}
+            stroke={INK}
+            strokeWidth="3.4"
+            strokeLinecap="round"
+          />
+        </g>
+      );
+    }
     if (eyesClosed) {
       /* Closed and curving up when pleased. Squeezed the other way for `yuck`,
          which is the difference between a cat enjoying itself and a cat trying
@@ -132,7 +251,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
       );
     }
     // pupils widen when a piece is on the way in, and drop to the piece he sniffs
-    const r = anticipating ? 1.18 : 1;
+    const r = eyesWide ? 1.34 : anticipating ? 1.18 : 1;
     const cy = sniffing ? 105 : 100;
     return (
       <g>
@@ -143,7 +262,81 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
     );
   };
 
-  const mouth = eating ? (
+  /* A grin, a gape or a tongue. The mouth carries most of the difference
+     between one reaction and the next, so it is switched before anything the
+     mood would otherwise have chosen. */
+  const grin = (
+    <g>
+      <path d="M 104 120 q 16 18 32 0 q -3 17 -16 17 q -13 0 -16 -17 Z" fill="#7A2E33" />
+      <path d="M 112 132 q 8 -3 16 0 q -2 10 -8 10 q -6 0 -8 -10 Z" fill="#F4837E" />
+    </g>
+  );
+  const gape = (open: number) => (
+    <g>
+      <ellipse cx="120" cy="128" rx={open} ry={open * 0.92} fill="#7A2E33" />
+      <ellipse cx="120" cy={132} rx={open * 0.55} ry={open * 0.4} fill="#F4837E" />
+    </g>
+  );
+  const smile = (
+    <g>
+      <path
+        d="M 106 122 q 14 16 28 0"
+        stroke={INK}
+        strokeWidth="3.4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M 111 128 q 9 8 18 0" fill="#F4837E" />
+    </g>
+  );
+
+  const rxMouth =
+    rx === 'hiccup' ? gape(9)
+    : rx === 'burp' ? gape(19)
+    : rx === 'sneeze' ? gape(21)
+    : rx === 'stars' || rx === 'dance' || rx === 'huge' ? grin
+    : rx === 'spicy' ? (
+        <g>
+          <path d="M 102 120 q 18 20 36 0 q -4 20 -18 20 q -14 0 -18 -20 Z" fill="#7A2E33" />
+          <path
+            d="M 112 134 q 8 -4 16 0 q 2 20 -8 22 q -10 -2 -8 -22 Z"
+            fill="#F4837E"
+            stroke="#D9605C"
+            strokeWidth="1.4"
+          />
+        </g>
+      )
+    : rx === 'lick' ? (
+        <g>
+          <path d="M 108 122 q 12 12 24 0" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
+          <path
+            className="cat-tongue-lick"
+            d="M 128 124 q 16 -2 15 10 q -1 11 -15 8 Z"
+            fill="#F4837E"
+            stroke="#D9605C"
+            strokeWidth="1.3"
+            style={{ transformOrigin: '126px 128px' }}
+          />
+        </g>
+      )
+    : rx === 'balloon' || rx === 'gulp' ? (
+        <path d="M 111 126 q 9 5 18 0" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" />
+      )
+    : rx === 'dizzy' ? (
+        <path
+          d="M 105 127 q 6 -7 12 0 q 6 7 12 0 q 6 -7 6 0"
+          stroke={INK}
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+        />
+      )
+    : rx === 'sleepy' ? <ellipse cx="120" cy="130" rx="10" ry="13" fill="#7A2E33" />
+    : rx === 'bubble' || rx === 'fishbone' ? gape(8)
+    : rx === 'hearts' || rx === 'float' ? smile
+    : null;
+
+  const mouth = rxMouth ?? (eating ? (
     <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 124px' }}>
       <ellipse cx="120" cy="127" rx={chewing ? 11 : 17} ry={chewing ? 9 : 15} fill="#7A2E33" />
       <ellipse cx="120" cy={chewing ? 131 : 134} rx={chewing ? 7 : 10} ry={5} fill="#F4837E" />
@@ -174,11 +367,8 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
         strokeLinecap="round"
       />
     </g>
-  ) : happy ? (
-    <g>
-      <path d="M 106 122 q 14 16 28 0" stroke={INK} strokeWidth="3.4" fill="none" strokeLinecap="round" />
-      <path d="M 111 128 q 9 8 18 0" fill="#F4837E" />
-    </g>
+  ) : happy || petting ? (
+    smile
   ) : asleep ? (
     <path d="M 114 124 q 6 5 12 0" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
   ) : (
@@ -186,9 +376,32 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
       <path d="M 108 123 q 6 7 12 0" />
       <path d="M 120 123 q 6 7 12 0" />
     </g>
-  );
+  ));
 
-  const bodyClass = eating
+  const RX_BODY: Record<Reaction, string> = {
+    hiccup: 'cat-hiccup',
+    burp: 'cat-bounce',
+    spicy: 'cat-shiver',
+    balloon: 'cat-inflate',
+    sleepy: 'cat-nod',
+    hearts: 'cat-bounce',
+    stars: 'cat-bounce',
+    dizzy: 'cat-wobble',
+    bubble: 'cat-bob',
+    gulp: 'cat-chomp',
+    fishbone: 'cat-bounce',
+    lick: 'cat-bob',
+    dance: 'cat-dance',
+    huge: 'cat-bounce',
+    sneeze: 'cat-sneeze',
+    float: 'cat-float',
+  };
+
+  const bodyClass = rx
+    ? RX_BODY[rx]
+    : petting
+      ? 'cat-nuzzle'
+      : eating
     ? 'cat-chomp'
     : asleep
       ? 'cat-sleep'
@@ -201,7 +414,14 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
             : 'cat-bob';
 
   return (
-    <svg viewBox="0 0 240 210" className="h-full w-full overflow-visible">
+    /* `data-reaction` is the only handle anything outside this file has on which
+       of the sixteen is running. It costs one attribute and it is what lets a
+       test prove he is not being shown the same mouthful twice in a row. */
+    <svg
+      viewBox="0 0 240 210"
+      className="h-full w-full overflow-visible"
+      data-reaction={rx ?? undefined}
+    >
       <defs>
         <radialGradient id="fur" cx="42%" cy="30%" r="78%">
           <stop offset="0%" stopColor="#FFFDF7" />
@@ -306,7 +526,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
               rx="10.5"
               ry="6.5"
               fill={BLUSH}
-              opacity={happy || eating ? 0.78 : 0.42 + fullness * 0.25}
+              opacity={rx === 'spicy' ? 1 : happy || eating || petting ? 0.78 : 0.42 + fullness * 0.25}
             />
             <ellipse
               cx="149"
@@ -314,7 +534,7 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
               rx="10.5"
               ry="6.5"
               fill={BLUSH}
-              opacity={happy || eating ? 0.78 : 0.42 + fullness * 0.25}
+              opacity={rx === 'spicy' ? 1 : happy || eating || petting ? 0.78 : 0.42 + fullness * 0.25}
             />
 
             {/* nose — it twitches while he works out what he has been given */}
@@ -374,17 +594,150 @@ function CatArt({ fullness, mood, look = 0 }: Props) {
           {/* No cross, no red mark, nothing that scores him. The flat ears and
               the tongue are the whole message, and they read as a cat being a
               cat rather than as the game telling him he is wrong. */}
-          {happy && (
+          {(happy || petting) && !rx && <PleasedExtras />}
+          {petting && (
+            <g className="cat-heart" fill="#FF5A7A">
+              <path d="M 176 46 c -4 -6 -14 -3 -14 5 c 0 7 9 12 14 17 c 5 -5 14 -10 14 -17 c 0 -8 -10 -11 -14 -5 Z" />
+            </g>
+          )}
+
+          {/* ---- what comes out of him, one reaction at a time ---- */}
+
+          {rx === 'hiccup' && (
+            <g fill="#BFE3D0" opacity="0.9">
+              <circle className="cat-puff" cx="152" cy="118" r="6" />
+              <circle className="cat-puff cat-puff-2" cx="166" cy="110" r="4" />
+            </g>
+          )}
+
+          {rx === 'burp' && (
+            <g className="cat-burp-cloud" fill="#8FC46B" opacity="0.75">
+              <ellipse cx="150" cy="128" rx="15" ry="11" />
+              <ellipse cx="170" cy="120" rx="11" ry="8" />
+              <ellipse cx="186" cy="113" rx="7" ry="5.5" />
+            </g>
+          )}
+
+          {rx === 'spicy' && (
             <g>
-              <g className="cat-sparkle" fill="#F7C744">
-                <path d="M 186 52 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 l 10 -4 Z" />
+              <g stroke="#FFD9CC" strokeLinecap="round" fill="none" strokeWidth="3.4" opacity="0.9">
+                <path className="cat-whiff" d="M 74 42 q -10 -12 0 -22 q 10 -10 0 -20" />
+                <path className="cat-whiff cat-whiff-2" d="M 166 42 q 10 -12 0 -22 q -10 -10 0 -20" />
               </g>
-              <g className="cat-sparkle cat-sparkle-2" fill="#F7C744">
-                <path d="M 46 66 l 3 7 l 7 3 l -7 3 l -3 7 l -3 -7 l -7 -3 l 7 -3 Z" />
+              <path
+                className="cat-drop"
+                d="M 178 78 q 7 10 0 15 q -7 -5 0 -15 Z"
+                fill="#8FD3F4"
+              />
+            </g>
+          )}
+
+          {rx === 'sleepy' && (
+            <text className="cat-zzz" x="180" y="60" fontSize="22" fontWeight="800" fill="#BFE3D0">
+              z
+            </text>
+          )}
+
+          {rx === 'hearts' && (
+            <g fill="#FF5A7A">
+              <path
+                className="cat-heart"
+                d="M 168 52 c -4 -6 -14 -3 -14 5 c 0 7 9 12 14 17 c 5 -5 14 -10 14 -17 c 0 -8 -10 -11 -14 -5 Z"
+              />
+              <path
+                className="cat-heart cat-heart-2"
+                d="M 62 58 c -3 -5 -11 -2 -11 4 c 0 6 7 10 11 14 c 4 -4 11 -8 11 -14 c 0 -6 -8 -9 -11 -4 Z"
+              />
+            </g>
+          )}
+
+          {rx === 'stars' && (
+            <g fill="#F7C744">
+              <path
+                className="cat-sparkle"
+                d="M 186 46 l 5 12 l 12 5 l -12 5 l -5 12 l -5 -12 l -12 -5 l 12 -5 Z"
+              />
+              <path
+                className="cat-sparkle cat-sparkle-2"
+                d="M 46 62 l 4 9 l 9 4 l -9 4 l -4 9 l -4 -9 l -9 -4 l 9 -4 Z"
+              />
+            </g>
+          )}
+
+          {rx === 'dizzy' && (
+            <g className="cat-orbit" style={{ transformOrigin: '120px 40px' }} fill="#F7C744">
+              <path d="M 156 40 l 4 9 l 9 4 l -9 4 l -4 9 l -4 -9 l -9 -4 l 9 -4 Z" />
+              <path d="M 84 40 l 3 7 l 7 3 l -7 3 l -3 7 l -3 -7 l -7 -3 l 7 -3 Z" opacity="0.8" />
+            </g>
+          )}
+
+          {rx === 'bubble' && (
+            <g className="cat-bubble" style={{ transformOrigin: '120px 132px' }}>
+              <circle cx="120" cy="150" r="22" fill="#BFE3D0" opacity="0.42" />
+              <circle cx="120" cy="150" r="22" fill="none" stroke="#EAFBF2" strokeWidth="2" />
+              <circle cx="111" cy="142" r="5" fill="#FFFFFF" opacity="0.85" />
+            </g>
+          )}
+
+          {rx === 'gulp' && (
+            <ellipse className="cat-lump" cx="120" cy="140" rx="13" ry="11" fill={FUR_SHADE} />
+          )}
+
+          {rx === 'fishbone' && (
+            <g
+              className="cat-float-up"
+              stroke="#EAFBF2"
+              strokeWidth="2.6"
+              fill="none"
+              strokeLinecap="round"
+            >
+              <path d="M 150 128 l 26 0" />
+              <path d="M 156 122 l 0 12 M 163 120 l 0 16 M 170 122 l 0 12" />
+              <path d="M 176 128 l 9 -7 l 0 14 Z" />
+              <circle cx="150" cy="128" r="3" fill="#EAFBF2" />
+            </g>
+          )}
+
+          {rx === 'lick' && (
+            <g fill="#F7C744" opacity="0.8">
+              <circle className="cat-puff" cx="150" cy="126" r="3" />
+              <circle className="cat-puff cat-puff-2" cx="90" cy="130" r="2.6" />
+            </g>
+          )}
+
+          {rx === 'dance' && (
+            <g fill="#BFE3D0">
+              <g className="cat-note">
+                <ellipse cx="176" cy="66" rx="6" ry="4.5" transform="rotate(-20 176 66)" />
+                <path d="M 181 64 L 181 44 L 192 40 L 192 46 L 184 49" />
               </g>
-              <g className="cat-heart" fill="#FF8A65">
-                <path d="M 152 44 c -4 -6 -14 -3 -14 5 c 0 7 9 12 14 17 c 5 -5 14 -10 14 -17 c 0 -8 -10 -11 -14 -5 Z" />
+              <g className="cat-note cat-note-2">
+                <ellipse cx="56" cy="78" rx="5" ry="4" transform="rotate(-20 56 78)" />
+                <path d="M 60 76 L 60 60 L 69 57 L 69 62 L 62 64" />
               </g>
+            </g>
+          )}
+
+          {rx === 'huge' && (
+            <g className="cat-sparkle" fill="#F7C744">
+              <path d="M 190 60 l 6 14 l 14 6 l -14 6 l -6 14 l -6 -14 l -14 -6 l 14 -6 Z" />
+              <path d="M 44 70 l 5 11 l 11 5 l -11 5 l -5 11 l -5 -11 l -11 -5 l 11 -5 Z" />
+            </g>
+          )}
+
+          {rx === 'sneeze' && (
+            <g className="cat-spray" fill="#BFE3D0" opacity="0.85">
+              <circle cx="150" cy="126" r="4" />
+              <circle cx="166" cy="118" r="3" />
+              <circle cx="164" cy="136" r="2.6" />
+              <circle cx="180" cy="128" r="2.2" />
+            </g>
+          )}
+
+          {rx === 'float' && (
+            <g className="cat-sparkle" fill="#F7C744" opacity="0.9">
+              <path d="M 70 176 l 4 9 l 9 4 l -9 4 l -4 9 l -4 -9 l -9 -4 l 9 -4 Z" />
+              <path d="M 174 180 l 4 9 l 9 4 l -9 4 l -4 9 l -4 -9 l -9 -4 l 9 -4 Z" />
             </g>
           )}
         </g>

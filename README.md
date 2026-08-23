@@ -127,7 +127,15 @@ again; after two misses the right piece glows and the sound repeats. Every round
 ends in success. A meal is 8 pieces, about 3–5 minutes. Repetition across days
 beats length within a day.
 
-**Pacing.** Everything at a round boundary is letters — the confirmation is
+**Pacing.** A correct answer used to cost 4.7 seconds before the next question
+arrived, and 5.6 on the third of rounds that added a word of praise — about
+forty seconds of an eight-piece meal spent watching nothing happen. The wait
+before the cat swallows is shorter now and the praise is no longer queued behind
+the meow; it plays over the top of the next round opening. The silence at the
+round boundary is untouched, because it is the only part of the wait that was
+doing a job:
+
+Everything at a round boundary is letters — the confirmation is
 "/mmm/ … M!" and the next prompt is "T … /t/". Butted together they are four
 letter sounds in a row and he cannot hear where the answer ended and the new
 question began, so there is close to two seconds of silence between them (the
@@ -135,6 +143,31 @@ constants are at the top of `Play.tsx`). The cat keeps looking pleased through
 it, so the quiet reads as *that was right* rather than as a stall. The greeting
 runs in the same chain as the first prompt for the same reason — fired
 separately it got cut in half by the prompt that followed it.
+
+**The piece he is holding talks.** Hold a piece for a third of a second and it
+wakes up: it grows eyes, it breathes, and it says its own sound over and over
+until he lets go. He can then hear what is in his hand against what he was
+asked for and put it back himself, before anything has judged him. This is the
+one place in the game where he can check his own answer, and it costs him
+nothing to be wrong. A brush does not wake a piece — a four-year-old's hand is
+on the counter constantly, and a piece that talked on contact would talk over
+the question all day.
+
+**The reward is the cat, not a token.** Sixteen different things can happen when
+he swallows: a hiccup, a burp, steam out of both ears, a belly that inflates, a
+bubble blown and popped, spiral eyes, a fish skeleton floating out, nodding off
+mid-mouthful. They are dealt from a shuffled pack, so four in a row can never
+repeat and a full meal cannot show him the same one twice. Before this there was
+exactly one — chomp, pleased face, next question, eight times a meal, every day.
+
+**A run builds.** Three first-try answers in a row and the restaurant lights come
+up and stay up. Five and the paper comes down as well. One miss and it all goes
+quietly back to normal, with no sound of its own and nothing said about it.
+
+**One round a meal is gold.** Every piece in it, never just the answer — a single
+shimmering piece would point straight at the right one. Getting it right lands a
+new decoration in the room while he is watching, instead of on a summary screen
+several rounds later.
 
 **Difficulty** is invisible and never announced.
 
@@ -161,7 +194,18 @@ letters are preferred as distractors — practice lands where the errors are.
 **Round types.** Sound (the backbone), plus word-initial ("sun … /sss/") and
 letter-name ("where's S?") rounds once a letter is known.
 
-**Coming back.** One restaurant decoration is earned per finished meal.
+**Coming back.** One restaurant decoration is earned per finished meal, plus one
+for the gold round. There are twenty-one of them. The first version had eleven,
+two of which were granted at the start, so the shelf ran dry after eight meals
+and the end screen quietly stopped having anything to give — which is roughly
+when a child who plays most days stops asking for it.
+
+**Stroking the cat.** On the title and rest screens he can stroke the cat and it
+purrs, shuts its eyes and leans into the finger, for as long as he likes.
+Nothing is asked of him there and nothing is counted. On the rest screen the row
+of pieces he ate is pressable too, and each one says itself back — "/mmm/ ... M!"
+Those recordings are deliberately kept off the answer path, where reading the
+letter back would put two more sounds between him and the next question.
 
 ## Parent screen
 
@@ -179,7 +223,7 @@ src/
     engine.ts    round generation, weighting, difficulty
     store.ts     profile, mastery, unlocks (localStorage)
     audio.ts     clip preload/playback, synthesized SFX
-  components/    Cat, Sushi, Restaurant, Plate
+  components/    Cat, Sushi, Restaurant, Plate, Confetti, PettableCat
   screens/       Title, Play, Rest, Parent
 scripts/
   generate-audio.mjs       the 114 letter clips
@@ -190,8 +234,12 @@ scripts/
 e2e/                       browser tests — layout, hit targets, a real round
 ```
 
-The cat is driven only by `{ fullness, mood }`. Swapping the SVG for illustrated
-art means replacing `Cat.tsx` and touching nothing else.
+The cat is driven only by `{ fullness, mood, reaction }`. Swapping the SVG for
+illustrated art means replacing `Cat.tsx` and touching nothing else. The sixteen
+reactions are listed in `REACTIONS` at the top of that file; each one is a body
+animation, an eye treatment, a mouth and one small piece of overlay art, which
+is what keeps sixteen of them affordable. `data-reaction` on the cat's `<svg>`
+is the only handle anything outside the file has on which one is running.
 
 ## Watch him play, then decide
 

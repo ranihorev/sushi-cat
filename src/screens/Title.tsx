@@ -1,4 +1,4 @@
-import { Cat } from '../components/Cat';
+import { PettableCat } from '../components/PettableCat';
 import { Counter, Restaurant } from '../components/Restaurant';
 import type { Profile } from '../game/types';
 
@@ -15,9 +15,13 @@ export function Title({ profile, onStart, onParent }: Props) {
         <Restaurant unlocked={profile.decorations} />
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center gap-1 pb-[clamp(60px,9vh,100px)]">
-          <div className="h-[clamp(170px,32vh,330px)] w-[clamp(210px,38vh,390px)]">
-            <Cat fullness={0.15} mood="idle" />
-          </div>
+          {/* He can stroke the cat here for as long as he likes. Nothing is
+              asked of him on this screen, and nothing is counted. */}
+          <PettableCat
+            fullness={0.15}
+            mood="idle"
+            className="h-[clamp(170px,32vh,330px)] w-[clamp(210px,38vh,390px)]"
+          />
 
           <h1 className="text-center text-[clamp(28px,5vw,52px)] leading-tight font-extrabold tracking-tight text-rice drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">
             Feed the Sushi Cat

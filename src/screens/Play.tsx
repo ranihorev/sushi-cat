@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Cat, type Mood } from '../components/Cat';
+import { Cat, REACTIONS, type Mood, type Reaction } from '../components/Cat';
+import { Confetti } from '../components/Confetti';
 import { Plate } from '../components/Plate';
-import { Counter, Restaurant } from '../components/Restaurant';
+import { Counter, DECORATIONS, Restaurant } from '../components/Restaurant';
 import { Sushi, type PieceState } from '../components/Sushi';
 import {
   audio,
@@ -35,6 +36,17 @@ const IDLE_NUDGE_MS = 7000;
    silence is what marks the boundary after it. */
 const PROMPT_LEAD_MS = 450; // between the new pieces appearing and the prompt
 const ROUND_GAP_MS = 600; // after the cat's reply, before the next round starts
+
+/* How long he waits between letting go of the right piece and the cat starting
+   to swallow it. This used to be 760ms, and it was the largest single piece of
+   dead air in the game: measured end to end, a correct answer cost 4.7 seconds
+   before the next question arrived, and 5.6 on the rounds that added a word of
+   praise. Over eight pieces that is about forty seconds of a child watching
+   nothing happen. The praise is no longer awaited either — it layers over the
+   next round's lead-in instead of queueing behind it. The silence that marks
+   the round boundary is untouched; it is the only part of the wait that was
+   ever doing a job. */
+const SWALLOW_MS = 520;
 const RETRY_GAP_MS = 450; // after the refusal, before the question comes back
 const SNIFF_MS = 620; // the wrong piece travels to his nose and he smells it
 const YUCK_MS = 700; // the recoil, and the piece tumbling back to the counter
@@ -45,11 +57,54 @@ const YUCK_MS = 700; // the recoil, and the piece tumbling back to the counter
 const MUZZLE = { x: 0.5, y: 0.82 };
 const GREETING_GAP_MS = 700; // after the cat's hello, before the very first prompt
 
+/* A piece has to be held, not brushed, before it wakes up. Below about a third
+   of a second every stray touch on the counter would start a face growing and a
+   voice talking, and a tap that was meant as an answer would be answered by the
+   piece rather than by the game. */
+const HOLD_WAKE_MS = 350;
+/** how often the piece in his hand repeats its own sound */
+const PIECE_VOICE_MS = 1500;
+
 /* The cat says hello before the first question rather than underneath it. This
    rides in the same chain as the prompt, so the prompt waits for the meow
    instead of cutting it off — which is what happened when the greeting was
    fired separately as the screen opened. */
 const GREETING: Array<string | number> = ['cat/greet', GREETING_GAP_MS];
+
+/** Which noise goes with which reaction. The animation is the joke; this is the
+    punchline arriving at the same moment. */
+const REACTION_SOUND: Record<Reaction, () => void> = {
+  hiccup: () => audio.hiccup(),
+  burp: () => audio.burp(),
+  spicy: () => audio.steam(),
+  balloon: () => audio.inflate(),
+  sleepy: () => audio.purr(),
+  hearts: () => audio.twinkle(),
+  stars: () => audio.twinkle(),
+  dizzy: () => audio.dizzy(),
+  bubble: () => audio.bubble(),
+  gulp: () => audio.gulp(),
+  fishbone: () => audio.sparkle(),
+  lick: () => audio.lick(),
+  dance: () => audio.dance(),
+  huge: () => audio.boing(),
+  sneeze: () => audio.sneeze(),
+  float: () => audio.twinkle(),
+};
+
+/** he is on a run — the room lights up */
+const FEVER_AT = 3;
+/** and at this point the paper comes down as well */
+const PARTY_AT = 5;
+
+function shuffled<T>(arr: readonly T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props) {
   const total = profile.settings.roundsPerMeal;
@@ -67,16 +122,46 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
   const [cheer, setCheer] = useState<string | null>(null);
   /** bumped whenever he asks to hear the prompt again, to restart the idle clock */
   const [heard, setHeard] = useState(0);
+  /** what he does with this mouthful — see REACTIONS in Cat.tsx */
+  const [reaction, setReaction] = useState<Reaction | null>(null);
+  /** the piece he has held long enough to wake up */
+  const [awake, setAwake] = useState<Letter | null>(null);
+  /** true for the one round in the meal where every piece is gold */
+  const [goldenRound, setGoldenRound] = useState(false);
+  /** bumped to send another fall of paper down the screen */
+  const [party, setParty] = useState(0);
+  /** a decoration that has just landed mid-meal, for the gold piece */
+  const [spotlight, setSpotlight] = useState<string | null>(null);
 
   const catRef = useRef<HTMLDivElement>(null);
   const pieceRefs = useRef(new Map<Letter, HTMLDivElement>());
   const idleTimer = useRef<number | undefined>(undefined);
+  const holdTimer = useRef<number | undefined>(undefined);
+  const voiceTimer = useRef<number | undefined>(undefined);
   const timers = useRef<number[]>([]);
   const recentTargets = useRef<Letter[]>([]);
+
+  /* Reactions are dealt from a shuffled pack rather than drawn at random, so a
+     meal cannot hand him the same burp three times while he never once sees the
+     bubble. Sixteen of them is two full meals before anything repeats. */
+  const reactionBag = useRef<Reaction[]>([]);
+
+  /* One round in the meal arrives gold. Every piece in it is gold, not just the
+     answer — a single shimmering piece would point straight at it and the round
+     would stop being a question.
+
+     Which round it is is decided once, when the round opens, and then held.
+     Deriving it from `eaten` on every render does not work: the eaten count
+     goes up the moment an answer is accepted, about a second before the next
+     round begins, so the leftover piece of the previous round turned gold while
+     the cat was still chewing. */
+  const goldenAt = useRef(Math.floor(Math.random() * total));
+  const eatenRef = useRef<Letter[]>([]);
 
   // the freshest profile, for generating the next round after stats have landed
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  eatenRef.current = eaten;
 
   const alive = useRef(true);
 
@@ -106,6 +191,8 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       alive.current = false;
       timers.current.forEach(clearTimeout);
       clearTimeout(idleTimer.current);
+      clearTimeout(holdTimer.current);
+      clearTimeout(voiceTimer.current);
       audio.stopVoice();
     };
   }, []);
@@ -129,6 +216,29 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     void audio.speak(promptClips(r), fallbackPrompt(r));
   }, []);
 
+  /* The piece in his hand says its own sound, over and over, until he lets go.
+     `oneShot` rather than `speak`, so it layers over the question instead of
+     cancelling it — the whole value is in hearing the two together. It is a
+     little quieter than the prompt so it reads as the piece talking rather than
+     as the game asking again. */
+  const speakPiece = useCallback((l: Letter) => {
+    void audio.oneShot(`prompt/${l}`, 0.9);
+    voiceTimer.current = window.setTimeout(() => speakPiece(l), PIECE_VOICE_MS);
+  }, []);
+
+  /** he has let go, or the round has taken the piece off him */
+  const sleepPiece = useCallback(() => {
+    clearTimeout(holdTimer.current);
+    clearTimeout(voiceTimer.current);
+    setAwake(null);
+  }, []);
+
+  /** the next reaction off the pack, reshuffling when the pack runs out */
+  const dealReaction = useCallback((): Reaction => {
+    if (!reactionBag.current.length) reactionBag.current = shuffled(REACTIONS);
+    return reactionBag.current.pop()!;
+  }, []);
+
   /* He asked to hear it again, so give him another quiet stretch to think in.
      Without this the idle nudge keeps its original deadline and the game can
      repeat the question a moment after he pressed the button — the same
@@ -150,6 +260,14 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       setMood('idle');
       setLocked(true);
       setGated(profile.settings.gateChoices);
+      setReaction(null);
+      /* Read through the ref, not a counter: StrictMode opens the first round
+         twice, and anything that counted its own calls would be a round out in
+         development and correct in production. */
+      setGoldenRound(eatenRef.current.length === goldenAt.current);
+      /* The eye drift used to be set on every pick and never put back, so the
+         cat spent the rest of the meal glancing off to one side. */
+      setLook(0);
       recentTargets.current = [...recentTargets.current, r.target].slice(-4);
 
       after(PROMPT_LEAD_MS, () => {
@@ -179,6 +297,14 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     return () => clearTimeout(idleTimer.current);
   }, [round, locked, misses, heard, speakPrompt]);
 
+  /* The gold round announces itself. The pieces shimmer, but a child looking at
+     the cat rather than the counter would miss that entirely. */
+  useEffect(() => {
+    if (!goldenRound) return;
+    const t = window.setTimeout(() => audio.shimmer(), PROMPT_LEAD_MS);
+    return () => clearTimeout(t);
+  }, [round, goldenRound]);
+
   /**
    * Where the sushi has to be let go for the cat to eat it. Deliberately much
    * bigger than the cat itself — a four-year-old's aim is approximate, and
@@ -195,6 +321,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     if (locked || gated) return;
     audio.unlock();
     clearTimeout(idleTimer.current);
+    sleepPiece();
     setLook(round.options.indexOf(letter) < round.options.length / 2 ? -1 : 1);
 
     // the piece is eaten where he let go of it, not from its slot on the counter
@@ -217,10 +344,11 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
       const first = misses === 0;
       const nextEaten = [...eaten, letter];
       const nextStreak = first ? streak + 1 : 0;
+      const wasGolden = goldenRound;
       let nextLevel = level;
       if (first && nextStreak > 0 && nextStreak % 3 === 0 && level < 3) nextLevel = promote(level);
 
-      after(760, async () => {
+      after(SWALLOW_MS, async () => {
         /* One ordered chain, not a pile of timers. Chewing, then the cat's
            reaction, then maybe a word of praise — each waits for the last to
            finish, and the next round only begins when the whole thing is done.
@@ -229,8 +357,15 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
         await audio.speak(['cat/nom']);
         if (!alive.current) return;
 
+        /* What he does with this mouthful. There are sixteen of these and they
+           are dealt from a shuffled pack, so the reward for a right answer is
+           something he has to watch to find out — which is the whole reason the
+           game had gone flat. */
+        const rx = dealReaction();
+        setReaction(rx);
         setMood('happy');
-        audio.happy();
+        REACTION_SOUND[rx]();
+
         setEaten(nextEaten);
         onProfileChange((p) => recordAnswer(p, round.target, first));
         setStreak(nextStreak);
@@ -238,25 +373,46 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           setLevel(nextLevel);
           onProfileChange((p) => ({ ...p, level: nextLevel }));
         }
-        if (nextStreak >= 3) {
+
+        /* A run of right answers builds instead of being announced once. Three
+           brings the restaurant lights up and holds them up; five sends the
+           paper down as well. A single miss takes it all away again, quietly
+           and with no sound of its own. */
+        if (nextStreak === FEVER_AT) audio.fever();
+        if (nextStreak >= PARTY_AT && nextStreak % PARTY_AT === 0) setParty((n) => n + 1);
+        if (nextStreak >= FEVER_AT) {
           setCheer(nextStreak >= 6 ? '🎉' : '⭐️');
           audio.sparkle();
           after(1400, () => setCheer(null));
         }
 
+        /* The gold piece pays out where he can see it: a decoration walks into
+           the room while he is still watching, rather than appearing on a
+           summary screen several rounds later. */
+        if (wasGolden) {
+          audio.shimmer();
+          audio.fanfare();
+          setParty((n) => n + 1);
+          const locked = DECORATIONS.find((d) => !profileRef.current.decorations.includes(d.id));
+          if (locked) {
+            onProfileChange((p) => ({ ...p, decorations: [...p.decorations, locked.id] }));
+            setSpotlight(locked.id);
+            after(2600, () => setSpotlight(null));
+          }
+        }
+
         /* No reading the letter back to him — just the cat being pleased, and
-           now and then a word for it. */
-        const praise = Math.random() < 0.35;
-        await audio.speak([
-          catSound(nextStreak >= 3 ? 'excited' : 'happy'),
-          ...(praise ? [320, randomPraise()] : []),
-        ]);
+           now and then a word for it. The praise is fired rather than awaited:
+           queued in this chain it added most of a second to every third round
+           and taught nothing that the meow had not already said. */
+        if (Math.random() < 0.35) void audio.oneShot(randomPraise());
+        await audio.speak([catSound(nextStreak >= FEVER_AT ? 'excited' : 'happy')]);
         if (!alive.current) return;
 
         if (nextEaten.length >= total) {
           setMood('asleep');
           audio.fanfare();
-          await audio.speak(['cat/yawn']);
+          await audio.speak(['ui/all-done', 'cat/yawn']);
           if (alive.current) onMealComplete(nextEaten);
           return;
         }
@@ -359,6 +515,16 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     clearTimeout(idleTimer.current);
     grabRef.current = { letter, x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
     setDrag({ letter, dx: 0, dy: 0, over: false });
+
+    /* Held rather than brushed: the piece wakes up, grows a face and starts
+       saying its own sound. He can then hear what he is carrying against what
+       he was asked for and put it back himself — nothing has judged him yet,
+       and putting it back costs him nothing. */
+    clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(() => {
+      setAwake(letter);
+      speakPiece(letter);
+    }, HOLD_WAKE_MS);
   };
 
   onMoveRef.current = (e: PointerEvent) => {
@@ -381,6 +547,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     const dy = e.clientY - g.y;
     const over = overCat(e.clientX, e.clientY);
     setDrag(null);
+    sleepPiece();
 
     if (over && g.moved) {
       handlePick(g.letter, { dx, dy });
@@ -398,6 +565,8 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
 
   const fullness = eaten.length / total;
   const optionCount = optionCountFor(level);
+  /** three right in a row and the lights come up; one miss and they go down */
+  const fever = streak >= FEVER_AT;
   const wordHint = round.kind === 'word' ? LETTERS[round.target].word : null;
 
   /* A piece that has left the counter has to stay in front of the cat, or the
@@ -427,12 +596,14 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
             disabled={locked || gated}
             drag={drag?.letter === l ? { dx: drag.dx, dy: drag.dy } : null}
             over={drag?.letter === l ? drag.over : false}
+            alive={awake === l}
+            golden={goldenRound}
             onGrab={(e) => grab(l, e)}
           />
         </div>
       )),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [round, pieceState, locked, gated, drag],
+    [round, pieceState, locked, gated, drag, awake, goldenRound],
   );
 
   return (
@@ -455,7 +626,7 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
 
       {/* the restaurant, with the cat waiting behind the counter */}
       <div className="relative min-h-0 flex-1">
-        <Restaurant unlocked={profile.decorations} dim />
+        <Restaurant unlocked={profile.decorations} spotlight={spotlight} dim fever={fever} />
 
         {/* Sits above the counter so the sushi can never cover the replay button.
             The column itself is click-through — it spans the whole room, and the
@@ -464,12 +635,15 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
           {cheer && (
             <div className="float-up pointer-events-none absolute top-[16%] text-6xl">{cheer}</div>
           )}
+          {/* keyed, so a fresh run of paper falls each time rather than the old
+              one carrying on where it left off */}
+          {party > 0 && <Confetti key={party} count={20} />}
 
           <div
             ref={catRef}
             className="h-[clamp(170px,34vh,360px)] w-[clamp(210px,40vh,420px)] shrink"
           >
-            <Cat fullness={fullness} mood={mood} look={look} />
+            <Cat fullness={fullness} mood={mood} look={look} reaction={reaction} />
           </div>
 
           <Plate eaten={eaten} total={total} />

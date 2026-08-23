@@ -187,6 +187,190 @@ export const DECORATIONS: Decoration[] = [
       </g>
     ),
   },
+
+  /* Everything below exists because the old list ran out.
+     Two of the eleven were granted at the start and one was earned per meal, so
+     from about the ninth finished meal the end screen had nothing left to give
+     and quietly stopped sparkling — which is roughly when a child who plays
+     most days stops asking for it. The gold piece hands one out mid-meal as
+     well, so the shelf has to be deep enough to survive two a day. */
+
+  {
+    id: 'fish-tank',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <rect x="288" y="212" width="104" height="66" rx="6" fill="#1E5E6B" opacity="0.9" />
+        <rect x="288" y="212" width="104" height="66" rx="6" fill="none" stroke="#8FA8B8" strokeWidth="3" />
+        <rect x="284" y="276" width="112" height="10" rx="4" fill="#6B4426" />
+        <path d="M 292 262 q 24 -12 48 0 q 26 12 52 0 l 0 14 l -100 0 Z" fill="#C9A46A" opacity="0.8" />
+        <g className="deco-wave" style={{ transformOrigin: '320px 268px' }}>
+          <path d="M 316 268 q -8 -22 2 -34" stroke="#6FA34D" strokeWidth="5" fill="none" strokeLinecap="round" />
+          <path d="M 328 268 q 6 -18 -2 -28" stroke="#8FC46B" strokeWidth="4" fill="none" strokeLinecap="round" />
+        </g>
+        <g className="deco-sway" style={{ transformOrigin: '360px 236px' }}>
+          <path d="M 352 236 q 12 -9 24 0 q -12 9 -24 0 Z M 352 236 l -8 -6 l 0 12 Z" fill="#FF8A65" />
+          <circle cx="368" cy="234" r="1.8" fill="#20302A" />
+        </g>
+      </g>
+    ),
+  },
+  {
+    id: 'maneki',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <ellipse cx="452" cy="278" rx="30" ry="22" fill="#FFF7EA" />
+        <circle cx="452" cy="240" r="24" fill="#FFF7EA" />
+        <path d="M 434 224 L 429 206 L 447 216 Z M 470 224 L 475 206 L 457 216 Z" fill="#FFF7EA" />
+        <circle cx="444" cy="238" r="3" fill="#20302A" />
+        <circle cx="460" cy="238" r="3" fill="#20302A" />
+        <path d="M 448 246 q 4 4 8 0" stroke="#20302A" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <ellipse cx="452" cy="262" rx="14" ry="8" fill="#E4574F" />
+        <circle cx="452" cy="262" r="4" fill="#F7C744" />
+        {/* the beckoning paw, always going */}
+        <g className="deco-wave" style={{ transformOrigin: '474px 262px' }}>
+          <ellipse cx="478" cy="250" rx="8" ry="11" fill="#FFF7EA" />
+        </g>
+      </g>
+    ),
+  },
+  {
+    id: 'menu-board',
+    anchor: 'top',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <rect x="286" y="34" width="74" height="112" rx="5" fill="#F1E4C6" stroke="#8E5527" strokeWidth="4" />
+        <g stroke="#5E4630" strokeWidth="4" strokeLinecap="round" opacity="0.55">
+          <path d="M 300 58 h 46" />
+          <path d="M 300 76 h 34" />
+          <path d="M 300 94 h 44" />
+          <path d="M 300 112 h 28" />
+        </g>
+        <circle cx="323" cy="30" r="5" fill="#8E5527" />
+      </g>
+    ),
+  },
+  {
+    id: 'steam-pot',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <rect x="112" y="248" width="62" height="38" rx="8" fill="#3A4A42" />
+        <rect x="106" y="240" width="74" height="12" rx="6" fill="#55665C" />
+        <circle cx="143" cy="238" r="5" fill="#8E5527" />
+        <g stroke="#BFE3D0" strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.6">
+          <path className="cat-whiff" d="M 128 234 q -8 -14 0 -26 q 8 -12 0 -22" />
+          <path className="cat-whiff cat-whiff-2" d="M 158 234 q 8 -14 0 -26 q -8 -12 0 -22" />
+        </g>
+      </g>
+    ),
+  },
+  {
+    id: 'window-moon',
+    anchor: 'top',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <rect x="404" y="36" width="96" height="88" rx="5" fill="#123049" stroke="#6B4426" strokeWidth="5" />
+        <circle cx="470" cy="62" r="14" fill="#F6EEDC" />
+        <circle cx="464" cy="58" r="12" fill="#123049" />
+        <g fill="#FFFBF2" opacity="0.75">
+          <circle cx="424" cy="56" r="2" />
+          <circle cx="440" cy="78" r="1.6" />
+          <circle cx="418" cy="96" r="1.8" />
+          <circle cx="480" cy="100" r="2.2" />
+        </g>
+        <line x1="452" y1="36" x2="452" y2="124" stroke="#6B4426" strokeWidth="4" />
+        <line x1="404" y1="80" x2="500" y2="80" stroke="#6B4426" strokeWidth="4" />
+      </g>
+    ),
+  },
+  {
+    id: 'chopstick-jar',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <path d="M 246 300 l 4 -46 l 34 0 l 4 46 Z" fill="#BFD8CC" />
+        <g stroke="#C9A46A" strokeWidth="4" strokeLinecap="round">
+          <line x1="258" y1="256" x2="252" y2="216" />
+          <line x1="266" y1="256" x2="266" y2="212" />
+          <line x1="274" y1="256" x2="281" y2="218" />
+        </g>
+        <rect x="244" y="250" width="46" height="9" rx="4" fill="#8FA8B8" />
+      </g>
+    ),
+  },
+  {
+    id: 'tea-set',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <path d="M 396 300 l 0 -26 q 0 -14 18 -14 q 18 0 18 14 l 0 26 Z" fill="#3E7C6B" />
+        <path d="M 432 272 q 12 4 8 16" stroke="#3E7C6B" strokeWidth="5" fill="none" />
+        <path d="M 402 262 l -10 -8" stroke="#3E7C6B" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="414" cy="256" r="4" fill="#F7C744" />
+        {[444, 466].map((x) => (
+          <path key={x} d={`M ${x} 300 l 0 -12 q 0 -8 9 -8 q 9 0 9 8 l 0 12 Z`} fill="#BFD8CC" />
+        ))}
+      </g>
+    ),
+  },
+  {
+    id: 'wave-banner',
+    anchor: 'top',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <rect x="520" y="188" width="140" height="60" rx="6" fill="#1F4B63" />
+        <path
+          d="M 528 226 q 18 -22 36 0 q 18 22 36 0 q 18 -22 36 0 q 10 12 16 4 l 0 12 l -124 0 Z"
+          fill="#5EE7C0"
+          opacity="0.85"
+        />
+        <path
+          d="M 528 216 q 18 -20 36 0 q 18 20 36 0 q 18 -20 36 0"
+          stroke="#FFFBF2"
+          strokeWidth="3"
+          fill="none"
+          opacity="0.7"
+        />
+        <circle cx="640" cy="204" r="9" fill="#F7C744" />
+      </g>
+    ),
+  },
+  {
+    id: 'string-lights',
+    anchor: 'top',
+    render: (k) => (
+      <g key={k}>
+        <path d="M 250 22 q 150 44 300 0" stroke="#3A4A42" strokeWidth="3" fill="none" />
+        {[
+          [290, 32, '#FF8A65'],
+          [340, 40, '#F7C744'],
+          [400, 44, '#8FC46B'],
+          [460, 40, '#5EE7C0'],
+          [510, 32, '#E4574F'],
+        ].map(([x, y, c], i) => (
+          <g key={i} className="deco-glow" style={{ animationDelay: `${i * 0.3}s` }}>
+            <line x1={x as number} y1={(y as number) - 8} x2={x as number} y2={y as number} stroke="#3A4A42" strokeWidth="2" />
+            <circle cx={x as number} cy={(y as number) + 7} r="7" fill={c as string} />
+          </g>
+        ))}
+      </g>
+    ),
+  },
+  {
+    id: 'daruma',
+    anchor: 'bottom',
+    render: (k) => (
+      <g key={k} className="deco-pop">
+        <path d="M 496 300 q -18 -12 -18 -34 q 0 -30 24 -30 q 24 0 24 30 q 0 22 -18 34 Z" fill="#E4574F" />
+        <ellipse cx="502" cy="252" rx="15" ry="12" fill="#F6EEDC" />
+        <circle cx="496" cy="252" r="3.4" fill="#20302A" />
+        <circle cx="508" cy="252" r="3.4" fill="#20302A" />
+        <path d="M 494 262 q 8 5 16 0" stroke="#20302A" strokeWidth="2" fill="none" strokeLinecap="round" />
+      </g>
+    ),
+  },
 ];
 
 interface Props {
@@ -194,6 +378,8 @@ interface Props {
   /** id of the decoration to spotlight (just unlocked) */
   spotlight?: string | null;
   dim?: boolean;
+  /** he is on a run — the room comes up to full and warms over */
+  fever?: boolean;
 }
 
 function Layer({
@@ -227,7 +413,7 @@ function Layer({
   );
 }
 
-function RestaurantScene({ unlocked, spotlight, dim }: Props) {
+function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
   const shown = DECORATIONS.filter((d) => unlocked.includes(d.id));
 
   return (
@@ -264,9 +450,26 @@ function RestaurantScene({ unlocked, spotlight, dim }: Props) {
         ))}
       </svg>
 
+      {/* The lights coming up on a run of right answers. It is the only reward
+          in the game that arrives without stopping the game to hand it over. */}
       <div
         className="absolute inset-0"
-        style={{ opacity: dim ? 0.55 : 1, transition: 'opacity 500ms' }}
+        style={{
+          background:
+            'radial-gradient(90% 70% at 50% 25%, rgba(255,196,96,0.55) 0%, rgba(255,150,60,0) 65%)',
+          opacity: fever ? 1 : 0,
+          transition: 'opacity 600ms',
+        }}
+      >
+        {fever && <div className="absolute inset-0" style={{ animation: 'feverGlow 1.8s ease-in-out infinite' }} />}
+      </div>
+
+      {/* Dimming used to run at 0.55, which faded the thing he had earned at
+          exactly the moment he was looking at it. It is only deep enough now to
+          keep the sushi ahead of the background. */}
+      <div
+        className="absolute inset-0"
+        style={{ opacity: fever ? 1 : dim ? 0.82 : 1, transition: 'opacity 500ms' }}
       >
         <Layer anchor="top" items={shown.filter((d) => d.anchor === 'top')} spotlight={spotlight} />
         <Layer

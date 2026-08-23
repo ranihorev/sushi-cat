@@ -5,7 +5,7 @@ import { CAT_CLIPS } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { blankProfile } from '../game/store';
 import type { Profile } from '../game/types';
-import { clipDurations, cutLog, playLog } from '../test/audio-stub';
+import { CLIP_MS, clipDurations, cutLog, playLog } from '../test/audio-stub';
 import { Play } from './Play';
 
 /* jsdom has no layout, so every element's rect is 0x0 at the origin. `overCat`
@@ -51,6 +51,29 @@ const tick = async (ms: number) => {
 
 /** the round is over and the next prompt has landed */
 const settleRound = () => tick(6000);
+
+/**
+ * Advance the clock in slices, recording when each voice clip started.
+ *
+ * Pacing tests used to name absolute times — "there must be nothing at 1800ms"
+ * — which meant that shortening any wait anywhere failed a test about a
+ * completely different wait. What the pacing rules actually say is that the gap
+ * between one thing and the next must be big enough, so that is what this
+ * measures. Synthesized effects are skipped: they carry no words, they cannot
+ * be talked over, and they all arrive in the log under the same name.
+ */
+const voiceTimeline = async (ms: number, step = 20) => {
+  const marks: { at: number; clip: string }[] = [];
+  let seen = 0;
+  for (let at = step; at <= ms; at += step) {
+    await tick(step);
+    while (seen < playLog.length) {
+      const clip = playLog[seen++];
+      if (clip.includes('/')) marks.push({ at, clip });
+    }
+  }
+  return marks;
+};
 
 /** The prompt names the letter it wants, so the log says what the answer is. */
 const targetOnScreen = (): Letter => {
@@ -247,16 +270,21 @@ describe('feeding the cat', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     await start();
     const target = targetOnScreen();
-
-    dragTo(target, ON_CAT);
-    await tick(1200); // chewed, and the cat has said his piece
-    expect(playLog.some((c) => CAT_CLIPS.includes(c))).toBe(true);
     playLog.length = 0;
 
-    await tick(600);
-    expect(playLog).toEqual([]);
+    dragTo(target, ON_CAT);
+    const marks = await voiceTimeline(6000);
 
-    await settleRound();
+    const reply = marks.filter((m) => CAT_CLIPS.includes(m.clip)).pop();
+    expect(reply, `the cat never answered — heard ${marks.map((m) => m.clip)}`).toBeTruthy();
+
+    const question = marks.find((m) => m.at > reply!.at && !m.clip.startsWith('cat/'));
+    expect(question, 'the next question never came').toBeTruthy();
+
+    // the meow itself, and then a real stretch of quiet before the next question
+    const quiet = question!.at - (reply!.at + CLIP_MS);
+    expect(quiet, `only ${quiet}ms of silence between the two`).toBeGreaterThanOrEqual(900);
+
     expect(targetOnScreen()).not.toBe(target);
   });
 
@@ -463,6 +491,143 @@ describe('gestures that are not an answer', () => {
     dragTo(targetOnScreen(), ON_CAT);
     await settleRound();
     expect(playLog).toContain('cat/nom');
+  });
+});
+
+describe('the piece in his hand', () => {
+  /* Endless Alphabet's trick, and the one thing here that teaches before the
+     game has judged anything: hold a piece and it says its own sound, so he can
+     hear what he is carrying against what he was asked for. */
+  it('wakes up and says its own sound when he holds it', async () => {
+    await start();
+    const target = targetOnScreen();
+    playLog.length = 0;
+
+    fireEvent.pointerDown(piece(target), { pointerId: 1, clientX: 0, clientY: -140 });
+    await tick(500);
+
+    expect(piece(target).className).toContain('sushi-alive');
+    expect(playLog).toContain(`prompt/${target}`);
+  });
+
+  it('goes quiet again the moment he lets go', async () => {
+    await start();
+    const target = targetOnScreen();
+
+    fireEvent.pointerDown(piece(target), { pointerId: 1, clientX: 0, clientY: -140 });
+    await tick(500);
+    // carried away and put down, not tapped — a tap replays the question, which
+    // would put the same clip in the log for a completely different reason
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 900, clientY: 900 });
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 900, clientY: 900 });
+    playLog.length = 0;
+
+    await tick(4000);
+    expect(playLog).not.toContain(`prompt/${target}`);
+    expect(piece(target).className).not.toContain('sushi-alive');
+  });
+
+  /* A four-year-old's hand rests on the counter constantly. If a brush woke a
+     piece, the game would be talking over its own question all day. */
+  it('is not woken by a touch too short to be a hold', async () => {
+    await start();
+    const target = targetOnScreen();
+
+    fireEvent.pointerDown(piece(target), { pointerId: 1, clientX: 10, clientY: 10 });
+    await tick(200);
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 10, clientY: 10 });
+
+    expect(piece(target).className).not.toContain('sushi-alive');
+  });
+});
+
+describe('what the cat does with a mouthful', () => {
+  const reactionShowing = () =>
+    document.querySelector('svg[data-reaction]')?.getAttribute('data-reaction') ?? null;
+
+  /* The old game had exactly one: chomp, pleased face, next question, eight
+     times a meal, every day. Sixteen of them are dealt from a shuffled pack, so
+     four in a row can never repeat. */
+  it('does something different every time', async () => {
+    await start();
+    const seen = new Set<string>();
+
+    for (let i = 0; i < 4; i++) {
+      dragTo(targetOnScreen(), ON_CAT);
+      await tick(900); // swallowed, and the reaction is on screen
+      const rx = reactionShowing();
+      expect(rx, 'no reaction was showing after he swallowed').toBeTruthy();
+      seen.add(rx!);
+      await settleRound();
+    }
+
+    expect(seen.size).toBe(4);
+  });
+
+  it('is over before the next question starts', async () => {
+    await start();
+    dragTo(targetOnScreen(), ON_CAT);
+    await settleRound();
+    expect(reactionShowing()).toBeNull();
+  });
+});
+
+describe('the gold round', () => {
+  /* One round a meal arrives gold. Every piece in it is gold, never just the
+     answer — a single shimmering piece would point straight at the right one
+     and the round would stop being a question at all. */
+  it('turns every piece gold, so the gold gives nothing away', async () => {
+    await start({ settings: { gateChoices: false, roundsPerMeal: 1 } });
+    const gold = document.querySelectorAll('.sushi-gold');
+    expect(gold).toHaveLength(optionsOnScreen().length);
+  });
+
+  it('hands over a decoration while he is still watching', async () => {
+    await start({ settings: { gateChoices: false, roundsPerMeal: 1 } });
+    const before = profileSeen.decorations.length;
+
+    dragTo(targetOnScreen(), ON_CAT);
+    await tick(900);
+
+    expect(profileSeen.decorations.length).toBe(before + 1);
+  });
+
+  /* The gold used to be worked out from the number of pieces eaten, which goes
+     up the moment an answer is accepted — so the piece left over from the round
+     before turned gold while the cat was still chewing, a full round early. */
+  it('does not turn gold while the cat is still eating the round before', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.6); // the gold is the second of two
+    await start({ settings: { gateChoices: false, roundsPerMeal: 2 } });
+    expect(document.querySelectorAll('.sushi-gold')).toHaveLength(0);
+
+    dragTo(targetOnScreen(), ON_CAT);
+    await tick(900); // swallowed and reacting, but the next round has not opened
+    expect(document.querySelectorAll('.sushi-gold')).toHaveLength(0);
+
+    await settleRound();
+    expect(document.querySelectorAll('.sushi-gold').length).toBeGreaterThan(0);
+  });
+
+  it('leaves the ordinary rounds alone', async () => {
+    // 0.99 puts the gold round last, so the first one is a plain one
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    await start({ settings: { gateChoices: false, roundsPerMeal: 8 } });
+    expect(document.querySelectorAll('.sushi-gold')).toHaveLength(0);
+  });
+});
+
+describe('a run of right answers', () => {
+  /* It builds rather than being announced once: the room lights at three, the
+     paper comes down at five. */
+  it('brings the paper down at five in a row, and not before', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99); // and keeps the gold round out of the way
+    await start({ settings: { gateChoices: false, roundsPerMeal: 8 } });
+
+    for (let i = 0; i < 4; i++) await feedCorrect();
+    expect(document.querySelectorAll('.confetti')).toHaveLength(0);
+
+    await feedCorrect();
+    expect(document.querySelectorAll('.confetti').length).toBeGreaterThan(0);
   });
 });
 

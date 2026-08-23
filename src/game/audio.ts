@@ -237,6 +237,125 @@ class AudioEngine {
   purr() {
     this.noise(0.5, 0.05, 0, 180, 3);
   }
+
+  /* ---------------------- the cat's sixteen reactions ----------------------
+     Each one is a few oscillators. They are deliberately short: the reaction
+     animation is the reward, and a long sound would push the next question
+     further away. Nothing here lasts more than about half a second. */
+
+  /** the small catch in the chest, twice */
+  hiccup() {
+    this.blip(520, 0.05, 'sine', 0.13);
+    this.blip(880, 0.06, 'sine', 0.1, 0.05);
+    this.blip(470, 0.05, 'sine', 0.11, 0.34);
+    this.blip(820, 0.06, 'sine', 0.09, 0.39);
+  }
+
+  /** low, rude, and over quickly — the single funniest sound to a four-year-old */
+  burp() {
+    for (let i = 0; i < 7; i++) {
+      this.blip(70 + (i % 2) * 26, 0.075, 'sawtooth', 0.12, i * 0.055);
+    }
+    this.noise(0.34, 0.05, 0, 260, 1.2);
+  }
+
+  /** wasabi — the hiss of steam out of both ears */
+  steam() {
+    this.noise(0.5, 0.06, 0, 5200, 0.8);
+    this.blip(1500, 0.4, 'sine', 0.03, 0.05);
+  }
+
+  /** the belly filling up like a balloon */
+  inflate() {
+    const c = this.ac();
+    if (!c || !this.master) return;
+    const t = c.currentTime;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(680, t + 0.55);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    osc.connect(g).connect(this.master);
+    osc.start(t);
+    osc.stop(t + 0.62);
+  }
+
+  /** a bubble blown out of the mouth, and the pop at the end of it */
+  bubble() {
+    this.blip(320, 0.5, 'sine', 0.05);
+    this.blip(1800, 0.05, 'triangle', 0.12, 0.52);
+    this.noise(0.05, 0.09, 0.52, 2600, 1.6);
+  }
+
+  /** a whole piece going down in one */
+  gulp() {
+    this.blip(420, 0.1, 'sine', 0.14);
+    this.blip(180, 0.16, 'sine', 0.12, 0.08);
+    this.blip(95, 0.2, 'sine', 0.1, 0.2);
+  }
+
+  /** round and round */
+  dizzy() {
+    for (let i = 0; i < 6; i++) {
+      this.blip(300 + Math.sin(i) * 220, 0.11, 'triangle', 0.07, i * 0.09);
+    }
+  }
+
+  /** hearts, stars — anything that floats up out of the fur */
+  twinkle() {
+    [784, 988, 1319, 1568].forEach((f, i) => this.blip(f, 0.2, 'sine', 0.07, i * 0.07));
+  }
+
+  /** the wind-up and the blast */
+  sneeze() {
+    this.blip(300, 0.22, 'sine', 0.05);
+    this.blip(520, 0.16, 'sine', 0.06, 0.16);
+    this.noise(0.3, 0.16, 0.3, 1900, 0.5);
+    this.blip(180, 0.2, 'sawtooth', 0.07, 0.3);
+  }
+
+  /** licking the last of it off the whiskers */
+  lick() {
+    this.noise(0.11, 0.06, 0, 3400, 1.2);
+    this.noise(0.09, 0.05, 0.17, 2900, 1.2);
+  }
+
+  /** a happy little jig */
+  dance() {
+    [523, 659, 523, 784].forEach((f, i) => this.blip(f, 0.13, 'triangle', 0.09, i * 0.13));
+  }
+
+  /** the whole cat swelling a size */
+  boing() {
+    const c = this.ac();
+    if (!c || !this.master) return;
+    const t = c.currentTime;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(760, t + 0.14);
+    osc.frequency.exponentialRampToValueAtTime(280, t + 0.4);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    osc.connect(g).connect(this.master);
+    osc.start(t);
+    osc.stop(t + 0.47);
+  }
+
+  /** the gold piece, arriving */
+  shimmer() {
+    for (let i = 0; i < 7; i++) this.blip(880 + i * 260, 0.3, 'sine', 0.05, i * 0.055);
+  }
+
+  /** the room lighting up when he gets three in a row */
+  fever() {
+    [392, 523, 659, 784, 1047].forEach((f, i) => this.blip(f, 0.26, 'triangle', 0.08, i * 0.06));
+  }
 }
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

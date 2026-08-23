@@ -21,12 +21,23 @@ interface Props {
   drag?: { dx: number; dy: number } | null;
   /** true while it's held over the cat */
   over?: boolean;
+  /**
+   * He has held it long enough for it to wake up: it grows a face, it breathes,
+   * and it says its own sound over and over. This is the part that teaches —
+   * he hears the piece in his hand against the sound in his ear and can put it
+   * back himself, before anything has judged him.
+   */
+  alive?: boolean;
+  /** the one gold piece in a meal */
+  golden?: boolean;
   onGrab: (e: React.PointerEvent) => void;
 }
 
 const RICE = '#FFFBF2';
 const RICE_EDGE = '#EADCC2';
 const NORI = '#20302A';
+const GOLD_RICE = '#FFF0BF';
+const GOLD_EDGE = '#E8C25A';
 
 /** Each topping reads differently at a glance — variety without hurting the letter. */
 function Topping({ kind }: { kind: keyof typeof TOPPING_COLORS }) {
@@ -124,7 +135,33 @@ function Topping({ kind }: { kind: keyof typeof TOPPING_COLORS }) {
   }
 }
 
-function SushiPiece({ letter, state, index, disabled, drag, over, onGrab }: Props) {
+/**
+ * The face a piece grows once it has been picked up and held.
+ *
+ * It sits on the rice either side of the nori band rather than over it, so the
+ * letter — the only thing on the piece that matters — is never covered by it.
+ */
+function AliveFace({ over }: { over: boolean }) {
+  return (
+    <g className="sushi-face">
+      {[34, 98].map((cx) => (
+        <g key={cx}>
+          <ellipse cx={cx} cy="84" rx="9" ry={over ? 10.5 : 9} fill="#FFFBF2" />
+          <ellipse cx={cx} cy="84" rx="9" ry={over ? 10.5 : 9} fill="none" stroke="#20302A" strokeWidth="1.6" />
+          {/* the pupils look up at the cat as he is carried towards it */}
+          <circle cx={cx + 1.5} cy={over ? 80.5 : 85} r="4.4" fill="#20302A" />
+          <circle cx={cx + 3} cy={over ? 78.8 : 83.2} r="1.5" fill="#FFFFFF" />
+        </g>
+      ))}
+      {/* A small open mouth, low on the nori band and well clear of the letter.
+          It is drawn in salmon rather than red — anything dark disappears into
+          the band and the piece then reads as staring rather than talking. */}
+      <ellipse cx="66" cy="100" rx={over ? 6 : 4.5} ry={over ? 5.5 : 3.5} fill="#FF8A65" />
+    </g>
+  );
+}
+
+function SushiPiece({ letter, state, index, disabled, drag, over, alive, golden, onGrab }: Props) {
   const cls =
     state === 'swallow' ? 'sushi-swallow'
     : state === 'sniff' ? 'sushi-sniff'
@@ -159,46 +196,61 @@ function SushiPiece({ letter, state, index, disabled, drag, over, onGrab }: Prop
       }}
       disabled={disabled}
       aria-label={`letter ${letter}`}
-      className={`sushi-btn ${carried ? 'sushi-carried' : cls}`}
+      className={`sushi-btn ${carried ? 'sushi-carried' : cls} ${alive ? 'sushi-alive' : ''}`}
       style={style}
     >
-      <svg viewBox="0 0 130 118" className="h-full w-full overflow-visible">
+      <svg
+        viewBox="0 0 130 118"
+        className={`h-full w-full overflow-visible ${golden ? 'sushi-gold' : ''}`}
+      >
         <ellipse cx="65" cy="108" rx="46" ry="7" fill="rgba(0,0,0,0.22)" />
 
-        {/* rice */}
-        <rect
-          x="12"
-          y="58"
-          width="106"
-          height="48"
-          rx="23"
-          fill={RICE}
-          stroke={RICE_EDGE}
-          strokeWidth="2"
-        />
-        <g fill={RICE_EDGE} opacity="0.5">
-          <ellipse cx="30" cy="90" rx="5" ry="3.5" />
-          <ellipse cx="100" cy="88" rx="5" ry="3.5" />
-        </g>
+        <g className="sushi-body">
+          {/* rice */}
+          <rect
+            x="12"
+            y="58"
+            width="106"
+            height="48"
+            rx="23"
+            fill={golden ? GOLD_RICE : RICE}
+            stroke={golden ? GOLD_EDGE : RICE_EDGE}
+            strokeWidth={golden ? 3 : 2}
+          />
+          <g fill={golden ? GOLD_EDGE : RICE_EDGE} opacity="0.5">
+            <ellipse cx="30" cy="90" rx="5" ry="3.5" />
+            <ellipse cx="100" cy="88" rx="5" ry="3.5" />
+          </g>
 
-        <g transform="translate(5,0)">
-          <Topping kind={LETTERS[letter].topping} />
-        </g>
+          <g transform="translate(5,0)">
+            <Topping kind={LETTERS[letter].topping} />
+          </g>
 
-        {/* nori band carrying the letter */}
-        <rect x="47" y="46" width="38" height="62" rx="6" fill={NORI} />
-        <rect x="47" y="46" width="38" height="62" rx="6" fill="url(#noriSheen)" />
-        <text
-          x="66"
-          y="90"
-          textAnchor="middle"
-          fill="#FFFBF2"
-          fontSize="38"
-          fontWeight="800"
-          className="sushi-letter"
-        >
-          {letter}
-        </text>
+          {/* nori band carrying the letter */}
+          <rect x="47" y="46" width="38" height="62" rx="6" fill={NORI} />
+          <rect x="47" y="46" width="38" height="62" rx="6" fill="url(#noriSheen)" />
+          <text
+            x="66"
+            y="90"
+            textAnchor="middle"
+            fill={golden ? '#FFE9A8' : '#FFFBF2'}
+            fontSize="38"
+            fontWeight="800"
+            className="sushi-letter"
+          >
+            {letter}
+          </text>
+
+          {alive && <AliveFace over={!!over} />}
+
+          {/* the gold piece wears its own little sparkle */}
+          {golden && (
+            <g fill="#FFF3C4" className="sushi-twinkle">
+              <path d="M 106 40 l 3.5 8 l 8 3.5 l -8 3.5 l -3.5 8 l -3.5 -8 l -8 -3.5 l 8 -3.5 Z" />
+              <path d="M 22 46 l 2.6 6 l 6 2.6 l -6 2.6 l -2.6 6 l -2.6 -6 l -6 -2.6 l 6 -2.6 Z" opacity="0.8" />
+            </g>
+          )}
+        </g>
 
         <defs>
           <linearGradient id="noriSheen" x1="0" y1="0" x2="1" y2="0">
