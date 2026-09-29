@@ -23,22 +23,30 @@ teaches the wrong thing.
 
 ```bash
 export ELEVENLABS_API_KEY=sk_...
-npm run audio                 # the 114 voice clips, a few minutes
+npm run audio                 # the voice clips, into audio-src/, a few minutes
 npm run audio:cat             # the cat's meows, purrs and chirps
-npm run audio:process         # REQUIRED — trims and levels them (needs ffmpeg)
+npm run audio:process         # REQUIRED — builds public/audio/ from audio-src/ (needs ffmpeg)
 ```
 
-`audio:process` is not optional. Raw TTS gets two things wrong for phonics and
-it fixes both:
+`audio-src/` holds the untouched recordings and is the only thing
+`audio:process` reads. It writes every clip in `public/audio/` fresh from them
+in one pass, so running it again gives the same files — never edit or process
+`public/audio/` directly. Raw TTS gets three things wrong for phonics and the
+processor fixes them:
 
-- **Trailing schwa.** Asked for `/p/` the model says "puh". Measured across the
-  raw clips, every stop consonant ran 0.33–1.2s — all vowel. The processor
-  keeps the burst and cuts the vowel off, which is why the generator now asks
-  for `P AH0`: a released burst reads more cleanly than a bare one, and the
-  release gets trimmed away anyway.
+- **Trailing schwa.** Asked for `/p/` the model says "puh". So stops are not
+  taken from the phoneme take at all: `/t/` is cut from the start of "tiger",
+  `/b/` from "ball". A stop at the start of a real word is said the way a
+  person says it. The cut is where the vowel's voice starts; a voiced stop
+  keeps 50ms of voice so `/b/` is not heard as `/p/`.
 - **Loudness.** The raw clips varied about 10x. Everything is levelled to the
-  same perceived loudness, with soft limiting so a short `/k/` burst can reach
-  the same level as a held `/mmm/`.
+  same loudness on its sounding part, with a clean lookahead limiter, so a short
+  `/k/` sits level with a held `/mmm/` without being distorted.
+- **Pace.** Speech is slowed once (rubberband if ffmpeg has it, else atempo),
+  held sounds and vowels are drawn out, and the confirmation is built from the
+  finished sound and letter name.
+
+Output is 44.1kHz mp3, so `/s/` and `/f/` keep their top end.
 
 Two checks, neither a substitute for listening:
 

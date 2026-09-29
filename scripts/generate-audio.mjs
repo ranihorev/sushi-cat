@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Generates every voice clip with ElevenLabs into public/audio/.
+ * Generates every voice clip with ElevenLabs into audio-src/. These are the
+ * untouched recordings; `npm run audio:process` builds the clips the game
+ * plays from them.
  *
  * The hard part of phonics TTS is that plain text makes the model say letter
  * *names* — "tee" instead of /t/. We sidestep that with CMU arpabet phoneme
  * tags, which force an exact pronunciation. Those are supported by
  * eleven_flash_v2, so that is the model used for the bare-phoneme prompts.
- * Full sentences (confirmations, words, praise) use a nicer-sounding model.
+ * Full sentences (words, praise) use a nicer-sounding model.
  *
  *   ELEVENLABS_API_KEY=... npm run audio             # everything that's missing
  *   ELEVENLABS_API_KEY=... npm run audio -- --force  # regenerate
@@ -21,7 +23,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = join(ROOT, 'public', 'audio');
+const OUT = join(ROOT, 'audio-src');
 
 const API_KEY =
   process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_KEY || process.env.XI_API_KEY;
@@ -166,19 +168,15 @@ function jobs() {
     const { arpa, word, sound } = LETTERS[L];
     const tag = ph(arpa, sound);
 
-    // the prompt: the bare phoneme, said twice, clipped, no trailing schwa
+    // the prompt: the bare phoneme, said twice. Stops are cut from the word
+    // instead (see process-audio.mjs), so for those this take goes unused.
     list.push({
       path: `prompt/${L}`,
       text: `${tag} ... ${tag}`,
       opts: { model: PHONEME_MODEL, stability: 0.85, style: 0, speed: 0.85 },
     });
 
-    // the confirmation: phoneme, then the letter name
-    list.push({
-      path: `confirm/${L}`,
-      text: `${tag} ... ${L}!`,
-      opts: { model: PHONEME_MODEL, stability: 0.8, style: 0.1, speed: 0.9 },
-    });
+    // no confirm/ clip: process-audio.mjs builds it from the prompt and the letter
 
     // the word, for word-initial rounds
     list.push({
