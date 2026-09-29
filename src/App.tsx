@@ -32,20 +32,43 @@ export default function App() {
     setProfile(next);
   }, []);
 
-  // keep the tablet awake while he plays
+  /* Keep the tablet awake while he plays. The browser drops the lock whenever
+     the page is hidden and never gives it back by itself, so it is asked for
+     again each time he returns. A lock that arrives after he has already left
+     the meal is let go at once rather than kept for good. */
   useEffect(() => {
     const nav = navigator as any;
-    if (screen === 'play' && nav.wakeLock) {
+    if (screen !== 'play' || !nav.wakeLock) return;
+    let live = true;
+    const request = () => {
+      if (document.visibilityState !== 'visible') return;
       nav.wakeLock.request('screen').then(
-        (l: any) => (wakeLock.current = l),
+        (l: any) => {
+          if (live) wakeLock.current = l;
+          else l.release?.();
+        },
         () => {},
       );
-    }
+    };
+    request();
+    document.addEventListener('visibilitychange', request);
     return () => {
+      live = false;
+      document.removeEventListener('visibilitychange', request);
       wakeLock.current?.release?.();
       wakeLock.current = null;
     };
   }, [screen]);
+
+  /* Any touch anywhere wakes the sound up again. iPadOS suspends it when the
+     screen locks or another app plays, and until now only the pieces and the
+     replay button tried to resume it — and the pieces refuse touches while a
+     round is waiting on a sound, which is exactly when it matters. */
+  useEffect(() => {
+    const wake = () => audio.unlock();
+    window.addEventListener('pointerdown', wake, true);
+    return () => window.removeEventListener('pointerdown', wake, true);
+  }, []);
 
   const start = useCallback((m: GameMode) => {
     audio.unlock();

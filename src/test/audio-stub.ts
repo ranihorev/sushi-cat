@@ -21,6 +21,15 @@ export const spokenFallbacks: string[] = [];
 /** clips the fetch stub should 404 on */
 export const missingClips = new Set<string>();
 
+/**
+ * Set to leave the context stuck where it is, the way iPadOS leaves it
+ * 'interrupted' after the screen locks: resume() is accepted and does nothing.
+ */
+export const contextLock = { stuck: false };
+const contexts: StubAudioContext[] = [];
+/** the context the engine made, so a test can put it to sleep */
+export const lastContext = () => contexts[contexts.length - 1];
+
 /** how long a fake clip lasts, in ms */
 export const CLIP_MS = 100;
 
@@ -39,19 +48,23 @@ export function resetAudioStub() {
   spokenFallbacks.length = 0;
   missingClips.clear();
   clipDurations.clear();
+  contextLock.stuck = false;
 }
 
 /** `/audio/prompt/M.mp3` -> `prompt/M` */
 const clipFromUrl = (url: string) => url.replace(/^.*\/audio\//, '').replace(/\.mp3$/, '');
 
 class StubAudioBuffer {
-  duration = CLIP_MS / 1000;
   numberOfChannels = 1;
   sampleRate = 44100;
   length = 4410;
   name: string;
   constructor(name: string) {
     this.name = name;
+  }
+  /** read when asked, so a length set after the clip was decoded still holds */
+  get duration() {
+    return (clipDurations.get(this.name) ?? CLIP_MS) / 1000;
   }
   getChannelData() {
     return new Float32Array(this.length);
@@ -102,15 +115,21 @@ class StubOscillator extends StubNode {
 }
 
 class StubBufferSource extends StubNode {
+  private ctx: StubAudioContext;
+  constructor(ctx: StubAudioContext) {
+    super();
+    this.ctx = ctx;
+  }
   buffer: StubAudioBuffer | null = null;
   onended: (() => void) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private done = false;
 
   start() {
+    // a context that is not running plays nothing and never reaches the end
+    if (this.ctx.state !== 'running') return;
     if (this.buffer) playLog.push(this.buffer.name);
-    const ms = (this.buffer && clipDurations.get(this.buffer.name)) ?? CLIP_MS;
-    this.timer = setTimeout(() => this.finish(), ms);
+    this.timer = setTimeout(() => this.finish(), (this.buffer?.duration ?? CLIP_MS / 1000) * 1000);
   }
 
   stop() {
@@ -137,8 +156,12 @@ class StubAudioContext {
   createGain() {
     return new StubGain();
   }
+  constructor() {
+    contexts.push(this);
+  }
+
   createBufferSource() {
-    return new StubBufferSource();
+    return new StubBufferSource(this);
   }
   createBiquadFilter() {
     return new StubFilter();
@@ -155,7 +178,7 @@ class StubAudioContext {
     return Promise.resolve(new StubAudioBuffer(new TextDecoder().decode(data)));
   }
   resume() {
-    this.state = 'running';
+    if (!contextLock.stuck) this.state = 'running';
     return Promise.resolve();
   }
   suspend() {
