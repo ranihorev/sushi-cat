@@ -228,6 +228,9 @@ jumps out of its cup and joins a row of friends along the top; a wrong cat stops
 says its own letter, and ducks down before the question comes back. Nothing is
 timed against him: a cat he misses comes up again, and the right one never stays
 away for more than two cats. One cat at a time at level 1, two at once later.
+No cat comes out until the question has been said, whatever the "wait for the
+prompt" setting is, so there is never anything to tap while he should be
+listening.
 The first version was cats sitting still on cushions, which was dull and did not
 show what to do. All three games use the same rounds, weighting, mastery and
 mix-up records, and a finished cafe visit counts as a meal. The cafe starts with

@@ -287,6 +287,30 @@ test.describe('kitty cafe', () => {
     await expect(page.locator('[aria-label="0 of 8 friends"]')).toBeVisible();
   });
 
+  test('no cat comes out while the question is still being asked', async ({ page }) => {
+    await page.goto('/');
+    await page.getByLabel('play kitty cafe', { exact: true }).click();
+    // the first prompt clip has started, and the cups are still empty
+    await expect
+      .poll(async () => (await playedClips(page)).some((c) => c.startsWith('prompt/')), {
+        timeout: 10_000,
+      })
+      .toBe(true);
+    expect(await page.locator('.cafe-pop').count()).toBe(0);
+    // and once it has been said, the cats come out
+    await expect(page.locator('.cafe-pop').first()).toBeVisible({ timeout: 8000 });
+  });
+
+  test('the cats still come out when the sound never finishes', async ({ page }) => {
+    // a suspended iPad: clips "start" but never end, so no question ever finishes
+    await page.addInitScript(() => {
+      AudioBufferSourceNode.prototype.start = function () {};
+    });
+    await page.goto('/');
+    await page.getByLabel('play kitty cafe', { exact: true }).click();
+    await expect(page.locator('.cafe-pop').first()).toBeVisible({ timeout: 12_000 });
+  });
+
   test('the home button goes back to the title', async ({ page }) => {
     await startMeal(page, 'play kitty cafe');
     await page.getByLabel('home', { exact: true }).click();

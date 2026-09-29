@@ -230,6 +230,31 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
     popTimer.current = window.setTimeout(popOne, 250);
   }, [popOne]);
 
+  /* The cats stay in their cups until the question has been asked in full, so
+     there is nothing to tap while it is still being said — the cafe always
+     waits for the prompt, whatever the parent setting says, because a cat that
+     pops up mid-question pulls his eyes away from listening.
+
+     If the sound never finishes (the iPad has suspended audio, a clip is
+     missing), the cats come out anyway after `maxMs`: waiting for the prompt
+     must never mean a cafe where nothing happens. Each ask has a number, and a
+     late finish from an old ask does nothing — otherwise the end of an earlier
+     question could let the cats out again while a caught one is still purring. */
+  const askSeq = useRef(0);
+  const askThenResume = useCallback(
+    (items: Array<string | number>, fallback: () => void, maxMs: number) => {
+      const seq = ++askSeq.current;
+      const go = () => {
+        if (seq !== askSeq.current || !alive.current) return;
+        askSeq.current++;
+        resume();
+      };
+      after(maxMs, go);
+      void audio.speak(items, fallback).then(go);
+    },
+    [after, resume],
+  );
+
   /* -------- a round: ask, then let the cats out -------- */
   const beginRound = useCallback(
     (r: Round, intro: Array<string | number> = []) => {
@@ -248,12 +273,11 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       setHand(null);
       recentTargets.current = [...recentTargets.current, r.target].slice(-4);
 
-      after(PROMPT_LEAD_MS, async () => {
-        await audio.speak([...intro, ...promptClips(r)], fallbackPrompt(r));
-        if (alive.current) resume();
-      });
+      after(PROMPT_LEAD_MS, () =>
+        askThenResume([...intro, ...promptClips(r)], fallbackPrompt(r), intro.length ? 7000 : 4500),
+      );
     },
-    [after, resume],
+    [after, askThenResume],
   );
 
   useEffect(() => {
@@ -281,6 +305,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
     audio.unlock();
     busy.current = true;
     paused.current = true;
+    askSeq.current++; // a question still being asked must not let the cats out now
     clearTimeout(popTimer.current);
     setHand(null);
     const r = roundRef.current;
@@ -357,8 +382,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       );
       if (!alive.current) return;
       sink(pop.id);
-      await audio.speak([450, ...promptClips(r)], fallbackPrompt(r));
-      if (alive.current) resume();
+      askThenResume([450, ...promptClips(r)], fallbackPrompt(r), 5000);
     });
   };
 
@@ -382,18 +406,18 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       {party > 0 && <Confetti key={party} count={20} />}
 
       {/* his new friends, one cushion per round */}
-      <div className="relative z-20 flex flex-col items-center gap-2 pt-3">
+      <div className="relative z-20 flex flex-col items-center gap-2 px-[clamp(72px,9vw,88px)] pt-3">
         <div
           role="img"
           aria-label={`${friends.length} of ${total} friends`}
-          className="flex max-w-[80vw] flex-wrap items-center justify-center gap-[clamp(4px,1vw,10px)]"
+          className="flex flex-wrap items-center justify-center gap-[clamp(4px,1vw,10px)]"
         >
           {Array.from({ length: total }, (_, i) => {
             const f = friends[i];
             return (
               <span
                 key={i}
-                className="grid h-[clamp(40px,7vh,64px)] w-[clamp(40px,7vh,64px)] place-items-center rounded-full bg-black/25"
+                className="grid h-[clamp(24px,min(7vh,6.5vw),64px)] w-[clamp(24px,min(7vh,6.5vw),64px)] place-items-center rounded-full bg-black/25"
               >
                 {f && (
                   <span className="cafe-friend block h-[118%] w-[118%]">
@@ -551,7 +575,7 @@ function CafeWall() {
     <svg
       viewBox="0 0 400 300"
       preserveAspectRatio="xMidYMid meet"
-      className="pointer-events-none absolute inset-x-0 top-[12%] mx-auto h-[46%] w-full opacity-80"
+      className="pointer-events-none absolute inset-x-0 top-[24%] mx-auto h-[40%] w-full opacity-80"
     >
       <circle cx="200" cy="150" r="92" fill="#3A1D2A" />
       <circle cx="200" cy="150" r="84" fill="#9FD6EA" />
