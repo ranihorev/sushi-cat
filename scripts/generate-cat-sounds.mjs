@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = join(ROOT, 'public', 'audio', 'cat');
+const OUT = join(ROOT, 'audio-src', 'cat');
 
 const API_KEY =
   process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_KEY || process.env.XI_API_KEY;
