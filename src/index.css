@@ -6,7 +6,15 @@
   --color-rice: #fffbf2;
   --color-tamago: #f7c744;
   --color-salmon: #ff8a65;
-  --font-round: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  /* the candy colours the whole game is dressed in */
+  --color-berry: #ff6fa3;
+  --color-sky: #6fcbf5;
+  --color-grape: #a98bf5;
+  --color-mint: #4fd1a5;
+  --color-cream: #fff6ec;
+  /* dark text on the light surfaces — a warm plum, never black */
+  --color-ink: #3b2a3a;
+  --font-round: 'Fredoka Variable', ui-rounded, 'SF Pro Rounded', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
 }
 
 html,
@@ -18,7 +26,7 @@ body,
 body {
   margin: 0;
   font-family: var(--font-round);
-  background: var(--color-nori-deep);
+  background: #2e7f75;
   color: var(--color-rice);
   overscroll-behavior: none;
   -webkit-user-select: none;
@@ -428,6 +436,17 @@ body {
 .cafe-friend { animation: popIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards }
 .cafe-hand { animation: cafeHand 0.9s ease-in-out infinite }
 .cafe-card-happy { animation: glowPulse 0.6s ease-in-out infinite }
+/* a wrong cat's card wobbles "not me" while it says its own letter */
+.cafe-card-shake { animation: headShake 0.72s ease-in-out }
+/* the cups rattle while the question is asked — somebody is hiding in there */
+.cafe-rattle { animation: cupRattle 0.9s ease-in-out infinite; transform-origin: 50% 90% }
+@keyframes cupRattle {
+  0%, 60%, 100% { transform: rotate(0) }
+  68% { transform: rotate(-3deg) }
+  76% { transform: rotate(3deg) }
+  84% { transform: rotate(-2deg) }
+  92% { transform: rotate(1deg) }
+}
 @keyframes cafeRise {
   from { transform: translateY(100%) }
   to { transform: translateY(0) }
@@ -473,14 +492,81 @@ body {
 .pulse-ring { animation: pulseRing 1.6s ease-out infinite }
 
 .big-btn {
-  border: 0;
+  position: relative;
+  border: 5px solid #fff;
   cursor: pointer;
   font-family: var(--font-round);
-  font-weight: 800;
+  font-weight: 700;
   transition: transform 130ms ease, box-shadow 130ms ease;
-  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.28);
+  /* a candy button: a thick white ring, a darker lip underneath and a shine */
+  box-shadow:
+    0 8px 0 rgba(59, 42, 58, 0.32),
+    inset 0 -7px 0 rgba(0, 0, 0, 0.1);
 }
-.big-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28) }
+.big-btn::after {
+  content: '';
+  position: absolute;
+  top: 9%;
+  left: 18%;
+  width: 34%;
+  height: 16%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: rotate(-24deg);
+  pointer-events: none;
+}
+.big-btn:active {
+  transform: translateY(5px);
+  box-shadow:
+    0 3px 0 rgba(59, 42, 58, 0.32),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.1);
+}
+/* the big play buttons breathe, each a beat after the last, so the eye goes to them */
+.btn-breathe { animation: btnBreathe 2.4s ease-in-out infinite }
+.btn-breathe-2 { animation-delay: 0.3s }
+.btn-breathe-3 { animation-delay: 0.6s }
+@keyframes btnBreathe {
+  0%, 100% { transform: scale(1) rotate(0) }
+  50% { transform: scale(1.06) rotate(-2deg) }
+}
+
+/* The small round white buttons: home, say it again, parents. White on the
+   bright rooms reads at a glance, and the colour goes into the icon. */
+.bubble-btn {
+  border: 0;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--color-ink);
+  box-shadow: 0 5px 0 rgba(59, 42, 58, 0.22);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.bubble-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(59, 42, 58, 0.22) }
+
+/* The title: each letter its own candy colour, with a white outline and a
+   soft drop, bobbing in a wave. */
+.candy-title { font-weight: 700; letter-spacing: 0.01em }
+.candy-title .ch {
+  display: inline-block;
+  animation: letterBob 2.6s ease-in-out infinite;
+  text-shadow:
+    3px 0 0 #fff, -3px 0 0 #fff, 0 3px 0 #fff, 0 -3px 0 #fff,
+    2px 2px 0 #fff, -2px 2px 0 #fff, 2px -2px 0 #fff, -2px -2px 0 #fff,
+    0 7px 0 rgba(59, 42, 58, 0.35);
+}
+@keyframes letterBob {
+  0%, 100% { transform: translateY(0) rotate(0) }
+  50% { transform: translateY(-6px) rotate(-3deg) }
+}
+
+/* bubbles drifting up the wall, and the bunting swinging under the curtain */
+.bubble-float { animation: bubbleFloat linear infinite }
+@keyframes bubbleFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 0 }
+  10% { opacity: 0.7 }
+  50% { transform: translateY(-50vh) translateX(18px) }
+  90% { opacity: 0.6 }
+  100% { transform: translateY(-100vh) translateX(-10px); opacity: 0 }
+}
+.bunting { animation: sway 5s ease-in-out infinite; transform-origin: 50% 0 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
