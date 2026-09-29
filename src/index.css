@@ -420,8 +420,31 @@ body {
 .sushi-sniff { animation: sniffHold 0.6s ease-out forwards; pointer-events: none; z-index: 40 }
 .sushi-spit { animation: spitBack 0.62s cubic-bezier(0.3, 0.85, 0.4, 1); pointer-events: none; z-index: 40 }
 .sushi-hint { animation: glowPulse 1.15s ease-in-out infinite }
-/* the cafe cats settle onto their cushions as a round opens */
-.cafe-cat { animation: popIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards }
+/* the kitty cafe: cats pop up out of the teacups and duck back down */
+.cafe-rise { animation: cafeRise 0.38s cubic-bezier(0.34, 1.5, 0.64, 1) both }
+.cafe-sink { animation: cafeSink 0.32s ease-in both; pointer-events: none }
+/* the caught cat jumps out of its cup, up towards the row of friends */
+.cafe-leap { animation: cafeLeap 0.5s cubic-bezier(0.5, 0, 0.75, 0) both; pointer-events: none }
+.cafe-friend { animation: popIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards }
+.cafe-hand { animation: cafeHand 0.9s ease-in-out infinite }
+.cafe-card-happy { animation: glowPulse 0.6s ease-in-out infinite }
+@keyframes cafeRise {
+  from { transform: translateY(100%) }
+  to { transform: translateY(0) }
+}
+@keyframes cafeSink {
+  from { transform: translateY(0) }
+  to { transform: translateY(100%) }
+}
+@keyframes cafeLeap {
+  0% { transform: translateY(0) scale(1); opacity: 1 }
+  30% { transform: translateY(-12%) scale(1.05); opacity: 1 }
+  100% { transform: translateY(-120%) scale(0.4); opacity: 0 }
+}
+@keyframes cafeHand {
+  0%, 100% { transform: translate(0, 0) }
+  50% { transform: translate(-10px, -12px) }
+}
 /* a tap instead of a drag — the piece hops to show it wants to be picked up */
 .sushi-hop { animation: hop 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) }
 /* springs back to the counter when let go somewhere else */
