@@ -722,7 +722,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
                 audio.unlock();
                 replayPrompt(round);
               }}
-              className="pointer-events-auto relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-white/12 active:scale-95"
+              className="pointer-events-auto relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-nori/40 active:scale-95"
             >
               <span className="pulse-ring absolute inset-0 rounded-full border-4 border-tamago/40" />
               <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-rice">
