@@ -2,6 +2,13 @@ import type { Letter } from './letters';
 
 export type Level = 1 | 2 | 3;
 
+/**
+ * Which game he picked on the title screen. `counter` and `train` are the sushi
+ * game, with the pieces sitting still or riding round on a belt; `cafe` is the
+ * kitty cafe, where he pats the cat wearing the letter.
+ */
+export type GameMode = 'counter' | 'train' | 'cafe';
+
 /** Prompt style for a round. All three teach; `sound` is the backbone. */
 export type RoundKind =
   /** hear the phoneme, find the letter */

@@ -207,6 +207,20 @@ of pieces he ate is pressable too, and each one says itself back — "/mmm/ ... 
 Those recordings are deliberately kept off the answer path, where reading the
 letter back would put two more sounds between him and the next question.
 
+**Three ways to play.** The title screen has three buttons, told apart by
+picture alone. The plain play button is the game above. The belt button is the
+**sushi train**: the same meal, but the pieces ride slowly along the counter
+and come round again, so he watches for the answer and reaches out to catch it.
+The belt is slow on purpose and stops the moment he touches a piece — a belt he
+has to be quick for would test his hands, not his letters. The cup with ears is
+the **kitty cafe**: a row of cats, each wearing its letter on a tag, and he pats
+the one the question asks for. The right cat purrs; a wrong cat looks up and
+says its own letter before the question comes back, the same side-by-side
+hearing the sushi cat gives him when it sniffs a wrong piece. All three use the
+same rounds, weighting, mastery and mix-up records, and a finished cafe visit
+counts as a meal. The cafe starts with three cats and one more moves in after
+each meal until all six live there.
+
 ## Parent screen
 
 Bottom-right of the title screen, or long-press the top-left corner during play.
@@ -224,7 +238,7 @@ src/
     store.ts     profile, mastery, unlocks (localStorage)
     audio.ts     clip preload/playback, synthesized SFX
   components/    Cat, Sushi, Restaurant, Plate, Confetti, PettableCat
-  screens/       Title, Play, Rest, Parent
+  screens/       Title, Play (sushi and sushi train), Cafe, Rest, Parent
 scripts/
   generate-audio.mjs       the 114 letter clips
   generate-cat-sounds.mjs  meows, purr, yawn, chewing

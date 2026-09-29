@@ -174,3 +174,101 @@ test.describe('the recordings', () => {
     expect((await playedClips(page)).length).toBeGreaterThan(0);
   });
 });
+
+/* The sushi train: the same meal, with the pieces riding round the counter. */
+test.describe('sushi train', () => {
+  const centreX = async (page: import('@playwright/test').Page, letter: string) => {
+    const b = await page.getByLabel(`letter ${letter}`).boundingBox();
+    return b ? b.x + b.width / 2 : NaN;
+  };
+
+  test('the pieces ride along the counter', async ({ page }) => {
+    await startMeal(page, 'play sushi train');
+    const [first] = await optionLetters(page);
+    const before = await centreX(page, first);
+    await page.waitForTimeout(800);
+    const after = await centreX(page, first);
+    // either it slid right, or it went off the end and came round again
+    expect(after).not.toBeCloseTo(before, 0);
+  });
+
+  test('the belt stops while he is holding a piece', async ({ page }) => {
+    await startMeal(page, 'play sushi train');
+    const width = page.viewportSize()!.width;
+    const letters = await optionLetters(page);
+    let held = letters[0];
+    await expect
+      .poll(async () => {
+        for (const l of letters) {
+          const x = await centreX(page, l);
+          if (x > 120 && x < width - 220) return (held = l);
+        }
+        return null;
+      })
+      .not.toBeNull();
+
+    const other = letters.find((l) => l !== held)!;
+    const b = (await page.getByLabel(`letter ${held}`).boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.down();
+    const before = await centreX(page, other);
+    await page.waitForTimeout(700);
+    expect(await centreX(page, other)).toBeCloseTo(before, 0);
+    await page.mouse.up();
+  });
+
+  test('feeds the cat when the right piece is caught and carried over', async ({ page }) => {
+    await startMeal(page, 'play sushi train');
+    const target = await currentTarget(page);
+    const width = page.viewportSize()!.width;
+    // wait for it to come round to where a hand can reach it
+    await expect
+      .poll(async () => {
+        const x = await centreX(page, target);
+        return x > 120 && x < width - 220;
+      }, { timeout: 30_000 })
+      .toBe(true);
+    await clearClips(page);
+
+    await feed(page, target);
+
+    await expect
+      .poll(() => playedClips(page), { timeout: 12_000 })
+      .toEqual(expect.arrayContaining(['cat/nom']));
+    await expect(page.locator('[aria-label="1 of 8 eaten"]')).toBeVisible();
+  });
+});
+
+/* The kitty cafe: the same lesson, with the answer a cat he pats. */
+test.describe('kitty cafe', () => {
+  test('purrs, and counts it, when he pats the cat with the letter', async ({ page }) => {
+    await startMeal(page, 'play kitty cafe');
+    const target = await currentTarget(page);
+    await clearClips(page);
+
+    await page.getByLabel(`cat ${target}`, { exact: true }).click();
+
+    await expect
+      .poll(() => playedClips(page), { timeout: 12_000 })
+      .toEqual(expect.arrayContaining(['cat/purr']));
+    await expect(page.locator('[aria-label="1 of 8 eaten"]')).toBeVisible();
+  });
+
+  test('a wrong cat says its own letter, and the question comes back', async ({ page }) => {
+    await startMeal(page, 'play kitty cafe');
+    const target = await currentTarget(page);
+    const labels = await page
+      .locator('[aria-label^="cat "]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')!.replace('cat ', '')));
+    const wrong = labels.find((l) => l !== target)!;
+    await clearClips(page);
+
+    await page.getByLabel(`cat ${wrong}`, { exact: true }).click();
+
+    await expect
+      .poll(() => playedClips(page), { timeout: 12_000 })
+      .toEqual(expect.arrayContaining([`letter/${wrong}`, `prompt/${target}`]));
+    expect(await playedClips(page)).not.toContain('cat/purr');
+    await expect(page.locator('[aria-label="0 of 8 eaten"]')).toBeVisible();
+  });
+});

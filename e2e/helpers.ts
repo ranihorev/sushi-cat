@@ -51,10 +51,10 @@ export const playedClips = (page: Page) => page.evaluate(() => (window as any)._
 export const clearClips = (page: Page) => page.evaluate(() => ((window as any).__played.length = 0));
 
 /** Start a meal and wait for the first prompt to finish. */
-export async function startMeal(page: Page) {
+export async function startMeal(page: Page, button = 'play') {
   await page.goto('/');
-  await page.getByLabel('play').click();
-  await page.locator('.sushi-btn').first().waitFor({ state: 'visible' });
+  await page.getByLabel(button, { exact: true }).click();
+  await page.locator('.sushi-btn, .cafe-cat').first().waitFor({ state: 'visible' });
   // the cat's hello, the beat after it, then the prompt itself
   await page.waitForTimeout(3600);
 }
