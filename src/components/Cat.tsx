@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useId, useState } from 'react';
 
 export type Mood =
   | 'idle'
@@ -54,13 +54,55 @@ interface Props {
   reaction?: Reaction | null;
   /** he is being stroked: eyes shut, a lean into the finger, hearts */
   petting?: boolean;
+  /** which cat this is — the sushi cat is calico, the cafe has the others */
+  coat?: CoatName;
+  /** the sushi chef's headband; the cafe cats are off duty */
+  chef?: boolean;
 }
 
-const FUR = '#FFF7EA';
-const FUR_SHADE = '#F2E4CE';
+/**
+ * A cat's colouring. Everything but `fur` is optional, and each extra is one
+ * layer drawn over the same shapes, so a new cat is a few colours rather than
+ * a new drawing.
+ */
+interface Coat {
+  fur: string;
+  /** the lit side of the fur gradient */
+  light: string;
+  /** chest, paw lines, the lump when he gulps */
+  shade: string;
+  /** the big warm patch over one ear and eye, and on the tail */
+  patch?: string;
+  /** the smaller dark patch over the other ear and on the back */
+  patch2?: string;
+  /** tabby stripes on the forehead, cheeks, sides and tail */
+  stripes?: string;
+  /** siamese points: ears, muzzle, paws and tail */
+  points?: string;
+}
+
+export const COATS = {
+  calico: { fur: '#FFF7EA', light: '#FFFDF7', shade: '#F2E4CE', patch: '#F4A261', patch2: '#5E534D' },
+  ginger: { fur: '#F7A95E', light: '#FFC994', shade: '#E8904A', stripes: '#D5742C' },
+  grey: { fur: '#AEB8C2', light: '#D0D8DF', shade: '#97A3AE', stripes: '#7C8793' },
+  siamese: { fur: '#F5E9D8', light: '#FFF8EE', shade: '#E6D5BD', points: '#6E5242' },
+  cream: { fur: '#FFF7EA', light: '#FFFDF7', shade: '#F2E4CE' },
+  tabby: { fur: '#CDA57C', light: '#E6C59E', shade: '#B88E63', stripes: '#8E6843' },
+} satisfies Record<string, Coat>;
+
+export type CoatName = keyof typeof COATS;
+
 const NORI = '#20302A';
 const INK = '#20302A';
 const BLUSH = '#FFB3A0';
+/** one outline round the whole animal, so head, body and paws read as separate shapes */
+const LINE = '#3A2F2C';
+const OUTLINE = { stroke: LINE, strokeWidth: 2.6, strokeLinejoin: 'round' as const };
+
+const TAIL =
+  'M 166 186 C 202 192, 222 170, 212 136 C 209 125, 202 117, 198 122 C 205 134, 204 154, 187 164 C 179 169, 172 171, 166 172 Z';
+const BODY =
+  'M 62 196 C 55 189, 52 178, 52 164 C 52 136, 82 118, 120 118 C 158 118, 188 136, 188 164 C 188 178, 185 189, 178 196 Z';
 
 /** The plain pleased face, for the beats where no reaction is running. */
 const PleasedExtras = () => (
@@ -84,7 +126,24 @@ const PleasedExtras = () => (
    The small idle behaviours (blinking, ear twitches, tail flicks) are what stop
    it reading as a static picture. They run on their own timers so the game
    never has to think about them. */
-function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: Props) {
+function CatArt({
+  fullness,
+  mood,
+  look = 0,
+  reaction = null,
+  petting = false,
+  coat: coatName = 'calico',
+  chef = true,
+}: Props) {
+  const coat: Coat = COATS[coatName];
+  const FUR = coat.fur;
+  const FUR_SHADE = coat.shade;
+  /* Ids have to be unique on the page: the cafe draws several cats at once, and
+     a second cat's gradient under the same id would paint the first one. */
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const id = (name: string) => `${name}-${uid}`;
+  const url = (name: string) => `url(#${id(name)})`;
+
   const [blinking, setBlinking] = useState(false);
   const [fidget, setFidget] = useState<'none' | 'ear' | 'tail'>('none');
   const [chewing, setChewing] = useState(false);
@@ -255,8 +314,10 @@ function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: 
     const cy = sniffing ? 105 : 100;
     return (
       <g>
-        <ellipse cx={cx + px} cy={cy} rx={8.5 * r} ry={10 * r} fill={INK} />
-        <circle cx={cx + px + 3} cy={cy - 4} r={3 * r} fill="#fff" />
+        <ellipse cx={cx + px} cy={cy} rx={9.5 * r} ry={11 * r} fill={INK} />
+        {/* a warm glint low in the eye — the cheapest way to make them shine */}
+        <ellipse cx={cx + px} cy={cy + 5 * r} rx={6 * r} ry={3.5 * r} fill="#4E7A5E" opacity="0.8" />
+        <circle cx={cx + px + 3.4} cy={cy - 4.4} r={3.6 * r} fill="#fff" />
         <circle cx={cx + px - 2.5} cy={cy + 3.5} r="1.5" fill="#fff" opacity="0.75" />
       </g>
     );
@@ -423,19 +484,28 @@ function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: 
       data-reaction={rx ?? undefined}
     >
       <defs>
-        <radialGradient id="fur" cx="42%" cy="30%" r="78%">
-          <stop offset="0%" stopColor="#FFFDF7" />
+        <radialGradient id={id('fur')} cx="42%" cy="30%" r="78%">
+          <stop offset="0%" stopColor={coat.light} />
           <stop offset="100%" stopColor={FUR} />
         </radialGradient>
-        <radialGradient id="chin" cx="50%" cy="50%" r="50%">
+        <radialGradient id={id('chin')} cx="50%" cy="50%" r="50%">
           <stop offset="52%" stopColor="#000" stopOpacity="0.1" />
           <stop offset="100%" stopColor="#000" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id={id('band')} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#2B4038" />
           <stop offset="50%" stopColor={NORI} />
           <stop offset="100%" stopColor="#2B4038" />
         </linearGradient>
+        <clipPath id={id('head')}>
+          <ellipse cx="120" cy="98" rx="55" ry="49" />
+        </clipPath>
+        <clipPath id={id('tail')}>
+          <path d={TAIL} />
+        </clipPath>
+        <clipPath id={id('body')}>
+          <path d={BODY} />
+        </clipPath>
       </defs>
 
       {/* ground shadow — grows with the cat */}
@@ -451,26 +521,48 @@ function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: 
         <g className={bodyClass}>
           {/* tail — a tapered shape rather than a uniform stroke, so it reads
               as part of the animal instead of a rope stuck to its side */}
-          <path
+          <g
             className={fidget === 'tail' ? 'cat-tail-flick' : 'cat-tail'}
-            d="M 166 186 C 202 192, 222 170, 212 136 C 209 125, 202 117, 198 122 C 205 134, 204 154, 187 164 C 179 169, 172 171, 166 172 Z"
-            fill={FUR}
             style={{ transformOrigin: '168px 180px' }}
-          />
+          >
+            <path d={TAIL} fill={coat.points ?? coat.patch ?? FUR} {...OUTLINE} />
+            {coat.stripes && (
+              <g
+                clipPath={url('tail')}
+                stroke={coat.stripes}
+                strokeWidth="5"
+                strokeLinecap="round"
+              >
+                <path d="M 186 158 l 14 14" />
+                <path d="M 198 146 l 16 4" />
+                <path d="M 202 130 l 14 -6" />
+              </g>
+            )}
+            <path d={TAIL} fill="none" {...OUTLINE} />
+          </g>
 
           {/* body — a sitting silhouette, wide at the base and narrowing to the
               shoulders. An ellipse read as a ball with a head stuck on it. */}
-          <path
-            d="M 62 196 C 55 189, 52 178, 52 164 C 52 136, 82 118, 120 118 C 158 118, 188 136, 188 164 C 188 178, 185 189, 178 196 Z"
-            fill="url(#fur)"
-          />
-          {/* chest marking */}
-          <ellipse cx="120" cy="170" rx="40" ry="27" fill={FUR_SHADE} opacity="0.38" />
+          <path d={BODY} fill={url('fur')} {...OUTLINE} />
+          <g clipPath={url('body')}>
+            {coat.patch2 && <ellipse cx="66" cy="150" rx="24" ry="20" fill={coat.patch2} />}
+            {coat.patch && <ellipse cx="182" cy="178" rx="26" ry="22" fill={coat.patch} />}
+            {coat.stripes && (
+              <g stroke={coat.stripes} strokeWidth="5" strokeLinecap="round" fill="none">
+                <path d="M 52 150 q 12 2 18 10" />
+                <path d="M 54 170 q 12 0 17 8" />
+                <path d="M 188 150 q -12 2 -18 10" />
+                <path d="M 186 170 q -12 0 -17 8" />
+              </g>
+            )}
+          </g>
+          {/* chest marking — a pale bib, which is what makes him look fluffy */}
+          <ellipse cx="120" cy="170" rx="34" ry="25" fill="#FFFDF7" opacity={coat.stripes ? 0.55 : 0.5} />
 
           {/* front paws */}
-          <ellipse cx="93" cy="190" rx="18" ry="10" fill="url(#fur)" />
-          <ellipse cx="147" cy="190" rx="18" ry="10" fill="url(#fur)" />
-          <g stroke={FUR_SHADE} strokeWidth="1.6" strokeLinecap="round">
+          <ellipse cx="93" cy="190" rx="18" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
+          <ellipse cx="147" cy="190" rx="18" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
+          <g stroke={coat.points ? coat.light : LINE} strokeWidth="1.8" strokeLinecap="round" opacity="0.6">
             <line x1="89" y1="185" x2="89" y2="193" />
             <line x1="97" y1="184" x2="97" y2="193" />
             <line x1="143" y1="185" x2="143" y2="193" />
@@ -480,7 +572,7 @@ function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: 
           {/* the head casts onto the chest — without this the two shapes merge
               into a single blob and the cat has no chin. Soft-edged: a plain
               ellipse here reads as a grey smudge on the chest. */}
-          <ellipse cx="120" cy="118" rx="58" ry="48" fill="url(#chin)" />
+          <ellipse cx="120" cy="118" rx="58" ry="48" fill={url('chin')} />
 
           {/* head — cranes forward over food, shakes itself clear of a bad smell */}
           <g
@@ -496,24 +588,58 @@ function CatArt({ fullness, mood, look = 0, reaction = null, petting = false }: 
               }
               style={{ transformOrigin: '80px 76px' }}
             >
-              <path d="M 78 80 L 63 26 L 112 58 Z" fill="url(#fur)" />
-              <path d="M 85 73 L 75 40 L 104 60 Z" fill={BLUSH} />
+              <path d="M 78 80 Q 60 44 66 28 Q 92 38 112 58 Z" fill={coat.points ?? coat.patch2 ?? FUR} {...OUTLINE} />
+              <path d="M 86 72 Q 74 50 76 40 Q 92 48 104 60 Z" fill={BLUSH} />
             </g>
             <g
               className={yuck ? 'cat-ear-flat-r' : undefined}
               style={{ transformOrigin: '160px 76px' }}
             >
-              <path d="M 162 80 L 177 26 L 128 58 Z" fill="url(#fur)" />
-              <path d="M 155 73 L 165 40 L 136 60 Z" fill={BLUSH} />
+              <path d="M 162 80 Q 180 44 174 28 Q 148 38 128 58 Z" fill={coat.points ?? coat.patch ?? FUR} {...OUTLINE} />
+              <path d="M 154 72 Q 166 50 164 40 Q 148 48 136 60 Z" fill={BLUSH} />
             </g>
 
             {/* head */}
-            <ellipse cx="120" cy="98" rx="55" ry="49" fill="url(#fur)" />
+            <ellipse cx="120" cy="98" rx="55" ry="49" fill={url('fur')} {...OUTLINE} />
+            <g clipPath={url('head')}>
+              {coat.patch && <ellipse cx="156" cy="70" rx="32" ry="28" fill={coat.patch} />}
+              {coat.patch2 && <ellipse cx="80" cy="58" rx="22" ry="16" fill={coat.patch2} />}
+              {coat.points && (
+                <ellipse cx="120" cy="120" rx="26" ry="20" fill={coat.points} opacity="0.75" />
+              )}
+              {coat.stripes && (
+                <g stroke={coat.stripes} strokeWidth="4" strokeLinecap="round" fill="none">
+                  <path d="M 110 52 l 3 13" />
+                  <path d="M 120 50 v 15" />
+                  <path d="M 130 52 l -3 13" />
+                  <path d="M 66 100 h 12" />
+                  <path d="M 67 110 h 10" />
+                  <path d="M 174 100 h -12" />
+                  <path d="M 173 110 h -10" />
+                </g>
+              )}
+              {/* the pale muzzle, which gives the mouth something to sit on */}
+              <ellipse cx="111" cy="124" rx="13" ry="10" fill="#FFFDF7" opacity="0.5" />
+              <ellipse cx="129" cy="124" rx="13" ry="10" fill="#FFFDF7" opacity="0.5" />
+            </g>
+            {/* redrawn over the patches, so they sit inside the outline */}
+            <ellipse cx="120" cy="98" rx="55" ry="49" fill="none" {...OUTLINE} />
 
-            {/* hachimaki — follows the curve of the forehead, knotted at the
+            {/* hachimaki — high on the head, clear of the eyes, knotted at the
                 side with two ends trailing off it */}
-            <path d="M 67 82 Q 120 61 173 82 L 173 94 Q 120 73 67 94 Z" fill="url(#band)" />
-            <circle cx="120" cy="74" r="6.5" fill="#FF8A65" />
+            {chef && (
+              <g>
+                <path
+                  d="M 70 70 Q 120 46 170 70 L 172 82 Q 120 58 68 82 Z"
+                  fill={url('band')}
+                  {...OUTLINE}
+                  strokeWidth={2}
+                />
+                <path d="M 168 72 q 16 -4 22 -14 q 2 10 -8 18 Z" fill={NORI} {...OUTLINE} strokeWidth={2} />
+                <path d="M 168 78 q 18 4 24 16 q -12 0 -20 -8 Z" fill={NORI} {...OUTLINE} strokeWidth={2} />
+                <circle cx="168" cy="76" r="5" fill="#FF8A65" {...OUTLINE} strokeWidth={2} />
+              </g>
+            )}
 
 
             <Eye cx={100} />
