@@ -95,7 +95,7 @@ export function Title({ profile, onStart, onParent }: Props) {
       <button
         type="button"
         onPointerDown={onParent}
-        className="absolute right-3 bottom-3 z-20 rounded-full bg-black/25 px-4 py-2 text-sm font-bold text-white/60"
+        className="absolute right-3 bottom-3 z-20 rounded-full bg-black/20 px-4 py-2 text-sm font-bold text-white/80"
       >
         parents
       </button>

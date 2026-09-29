@@ -261,36 +261,57 @@ test.describe('sushi train', () => {
   });
 });
 
-/* The kitty cafe: the same lesson, with the answer a cat he pats. */
+/* The kitty cafe: cats pop out of teacups holding letters, and he catches the
+   one the question asks for. */
 test.describe('kitty cafe', () => {
-  test('purrs, and counts it, when he pats the cat with the letter', async ({ page }) => {
+  const catsUp = (page: import('@playwright/test').Page) =>
+    page
+      .locator('.cafe-rise[aria-label^="cat "]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')!.replace('cat ', '')));
+
+  test('a caught cat purrs and joins his friends', async ({ page }) => {
     await startMeal(page, 'play kitty cafe');
     const target = await currentTarget(page);
+    // the right cat is the first one up, and it keeps coming back
+    await expect.poll(() => catsUp(page), { timeout: 30_000 }).toContain(target);
     await clearClips(page);
 
-    await page.getByLabel(`cat ${target}`, { exact: true }).click();
+    await page.getByLabel(`cat ${target}`, { exact: true }).dispatchEvent('pointerdown');
 
     await expect
       .poll(() => playedClips(page), { timeout: 12_000 })
       .toEqual(expect.arrayContaining(['cat/purr']));
-    await expect(page.locator('[aria-label="1 of 8 eaten"]')).toBeVisible();
+    await expect(page.locator('[aria-label="1 of 8 friends"]')).toBeVisible({ timeout: 5000 });
   });
 
   test('a wrong cat says its own letter, and the question comes back', async ({ page }) => {
+    test.setTimeout(90_000);
     await startMeal(page, 'play kitty cafe');
     const target = await currentTarget(page);
-    const labels = await page
-      .locator('[aria-label^="cat "]')
-      .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')!.replace('cat ', '')));
-    const wrong = labels.find((l) => l !== target)!;
+    let wrong = '';
+    await expect
+      .poll(
+        async () => {
+          wrong = (await catsUp(page)).find((l) => l !== target) ?? '';
+          return wrong;
+        },
+        { timeout: 45_000 },
+      )
+      .not.toBe('');
     await clearClips(page);
 
-    await page.getByLabel(`cat ${wrong}`, { exact: true }).click();
+    await page.getByLabel(`cat ${wrong}`, { exact: true }).dispatchEvent('pointerdown');
 
     await expect
       .poll(() => playedClips(page), { timeout: 12_000 })
       .toEqual(expect.arrayContaining([`letter/${wrong}`, `prompt/${target}`]));
     expect(await playedClips(page)).not.toContain('cat/purr');
-    await expect(page.locator('[aria-label="0 of 8 eaten"]')).toBeVisible();
+    await expect(page.locator('[aria-label="0 of 8 friends"]')).toBeVisible();
+  });
+
+  test('the home button goes back to the title', async ({ page }) => {
+    await startMeal(page, 'play kitty cafe');
+    await page.getByLabel('home', { exact: true }).click();
+    await expect(page.getByLabel('play kitty cafe', { exact: true })).toBeVisible();
   });
 });

@@ -221,17 +221,22 @@ picture alone. The plain play button is the game above. The belt button is the
 and come round again, so he watches for the answer and reaches out to catch it.
 The belt is slow on purpose and stops the moment he touches a piece — a belt he
 has to be quick for would test his hands, not his letters. The cup with ears is
-the **kitty cafe**: a row of cats, each wearing its letter on a tag, and he pats
-the one the question asks for. The right cat purrs; a wrong cat looks up and
-says its own letter before the question comes back, the same side-by-side
-hearing the sushi cat gives him when it sniffs a wrong piece. All three use the
-same rounds, weighting, mastery and mix-up records, and a finished cafe visit
-counts as a meal. The cafe starts with three cats and one more moves in after
-each meal until all six live there.
+the **kitty cafe**: peek-a-boo in the teacups. Cats pop up out of big teacups,
+each holding up a card with its letter, and duck back down a moment later. He
+hears a sound and catches the cat holding that letter. The caught cat purrs,
+jumps out of its cup and joins a row of friends along the top; a wrong cat stops,
+says its own letter, and ducks down before the question comes back. Nothing is
+timed against him: a cat he misses comes up again, and the right one never stays
+away for more than two cats. One cat at a time at level 1, two at once later.
+The first version was cats sitting still on cushions, which was dull and did not
+show what to do. All three games use the same rounds, weighting, mastery and
+mix-up records, and a finished cafe visit counts as a meal. The cafe starts with
+three cats and one more moves in after each meal until all six live there.
 
 ## Parent screen
 
-Bottom-right of the title screen, or long-press the top-left corner during play.
+Bottom-right of the title screen. During play, the house button in the top-left
+corner goes back to the title screen.
 Shows per-letter mastery, which mix-ups he makes, a manual override for the
 active set, name entry, pieces per meal, and a "wait for the prompt" toggle —
 turn that on if he taps at random instead of listening.
