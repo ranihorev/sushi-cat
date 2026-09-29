@@ -4,7 +4,8 @@ import { CAT_CLIPS, UI_CLIPS, audio, clipsForLetter } from './game/audio';
 import type { Letter } from './game/letters';
 import { ALL_LETTERS } from './game/letters';
 import { loadProfile, maybeUnlockBatch, noteSession, saveProfile } from './game/store';
-import type { Profile } from './game/types';
+import type { GameMode, Profile } from './game/types';
+import { Cafe } from './screens/Cafe';
 import { Parent } from './screens/Parent';
 import { Play } from './screens/Play';
 import { Rest } from './screens/Rest';
@@ -15,6 +16,7 @@ type Screen = 'title' | 'play' | 'rest' | 'parent';
 export default function App() {
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [screen, setScreen] = useState<Screen>('title');
+  const [mode, setMode] = useState<GameMode>('counter');
   const [eaten, setEaten] = useState<Letter[]>([]);
   const [newDecoration, setNewDecoration] = useState<string | null>(null);
   const [unlockedLetters, setUnlockedLetters] = useState<Letter[]>([]);
@@ -45,8 +47,9 @@ export default function App() {
     };
   }, [screen]);
 
-  const start = useCallback(() => {
+  const start = useCallback((m: GameMode) => {
     audio.unlock();
+    setMode(m);
     void audio.preload([
       ...profile.activeSet.flatMap(clipsForLetter),
       ...UI_CLIPS,
@@ -90,10 +93,21 @@ export default function App() {
         <Title profile={profile} onStart={start} onParent={() => setScreen('parent')} />
       )}
 
-      {screen === 'play' && (
+      {screen === 'play' && mode === 'cafe' && (
+        <Cafe
+          key={profile.mealsCompleted}
+          profile={profile}
+          onProfileChange={update}
+          onMealComplete={handleMealComplete}
+          onExit={() => setScreen('title')}
+        />
+      )}
+
+      {screen === 'play' && mode !== 'cafe' && (
         <Play
           key={profile.mealsCompleted}
           profile={profile}
+          mode={mode}
           onProfileChange={update}
           onMealComplete={handleMealComplete}
           onExit={() => setScreen('title')}
@@ -106,7 +120,7 @@ export default function App() {
           eaten={eaten}
           newDecoration={newDecoration}
           unlockedLetters={unlockedLetters}
-          onAgain={start}
+          onAgain={() => start(mode)}
           onHome={() => setScreen('title')}
         />
       )}

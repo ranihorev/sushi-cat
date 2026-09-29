@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Cat, REACTIONS, type Mood, type Reaction } from '../components/Cat';
 import { Confetti } from '../components/Confetti';
 import { Plate } from '../components/Plate';
@@ -17,10 +17,12 @@ import { demote, nextRound, optionCountFor, promote } from '../game/engine';
 import type { Letter } from '../game/letters';
 import { LETTERS } from '../game/letters';
 import { recordAnswer, recordConfusion } from '../game/store';
-import type { Level, Profile, Round } from '../game/types';
+import type { GameMode, Level, Profile, Round } from '../game/types';
 
 interface Props {
   profile: Profile;
+  /** 'train' sends the pieces riding round the counter on a belt */
+  mode?: GameMode;
   onProfileChange: (updater: (p: Profile) => Profile) => void;
   onMealComplete: (eaten: Letter[]) => void;
   onExit: () => void;
@@ -92,6 +94,14 @@ const REACTION_SOUND: Record<Reaction, () => void> = {
   float: () => audio.twinkle(),
 };
 
+/* The sushi train. The pieces ride slowly along the counter and come round
+   again, so the answer is something he watches for and reaches out to catch.
+   Slow on purpose, and it stops dead the moment he touches a piece: a belt he
+   has to be quick for would be testing his hands, not whether he knows the
+   letter. It also stands still while the cat is eating or refusing, because
+   the piece's flight to the cat is measured from its place on the belt. */
+const BELT_PX_PER_S = 55;
+
 /** he is on a run — the room lights up */
 const FEVER_AT = 3;
 /** and at this point the paper comes down as well */
@@ -106,7 +116,7 @@ function shuffled<T>(arr: readonly T[]): T[] {
   return a;
 }
 
-export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props) {
+export function Play({ profile, mode = 'counter', onProfileChange, onMealComplete, onExit }: Props) {
   const total = profile.settings.roundsPerMeal;
 
   const [level, setLevel] = useState<Level>(profile.level);
@@ -563,6 +573,52 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
     }
   };
 
+  /* -------- the belt, for the sushi train -------- */
+  const train = mode === 'train';
+  const beltRef = useRef<HTMLDivElement>(null);
+  const beltSlots = useRef<Array<HTMLDivElement | null>>([]);
+  const beltOffset = useRef(Math.random() * 1000);
+  const beltStill = useRef(false);
+  beltStill.current = !!drag || locked;
+
+  /* Positions are written straight onto the slots rather than through state:
+     re-rendering the whole screen sixty times a second for a slide would be
+     all cost and no benefit. The pieces are spaced evenly round one loop that
+     is a piece wider than the counter, so each one slides off one edge and
+     comes back on the other without ever being seen to jump. */
+  const layBelt = useCallback(() => {
+    const belt = beltRef.current;
+    const slots = beltSlots.current.filter((el): el is HTMLDivElement => !!el);
+    if (!belt || !slots.length) return;
+    const pieceW = slots[0].offsetWidth;
+    const loop = belt.clientWidth + pieceW;
+    if (loop <= 0) return;
+    slots.forEach((el, i) => {
+      const x = (((beltOffset.current + (i * loop) / slots.length) % loop) + loop) % loop;
+      el.style.transform = `translateX(${x - pieceW}px)`;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!train) return;
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 100);
+      last = now;
+      if (!beltStill.current) beltOffset.current += (BELT_PX_PER_S * dt) / 1000;
+      layBelt();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [train, layBelt]);
+
+  // new pieces take their places before they are painted, not a frame later
+  useLayoutEffect(() => {
+    if (train) layBelt();
+  }, [train, round, layBelt]);
+
   const fullness = eaten.length / total;
   const optionCount = optionCountFor(level);
   /** three right in a row and the lights come up; one miss and they go down */
@@ -575,7 +631,8 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
 
   const pieces = useMemo(
     () =>
-      round.options.map((l, i) => (
+      round.options.map((l, i) => {
+        const piece = (
         <div
           key={`${round.target}-${l}`}
           className="pointer-events-auto"
@@ -601,9 +658,26 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
             onGrab={(e) => grab(l, e)}
           />
         </div>
-      )),
+        );
+        if (!train) return piece;
+        /* On the belt each piece rides in a slot of its own. The slot carries
+           the belt's position, so the piece inside keeps its own transform for
+           rising in, being carried and being eaten. */
+        return (
+          <div
+            key={`${round.target}-${l}`}
+            ref={(el) => {
+              beltSlots.current[i] = el;
+            }}
+            className="absolute bottom-0 left-0"
+            style={{ transform: 'translateX(-100vw)' }}
+          >
+            {piece}
+          </div>
+        );
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [round, pieceState, locked, gated, drag, awake, goldenRound],
+    [round, pieceState, locked, gated, drag, awake, goldenRound, train],
   );
 
   return (
@@ -690,9 +764,19 @@ export function Play({ profile, onProfileChange, onMealComplete, onExit }: Props
         <Counter />
         {/* click-through: the row is far taller than the sushi drawn in it, and
             an invisible box must not swallow presses meant for the room above */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-[34%] flex items-end justify-center gap-[clamp(8px,2.5vw,32px)] px-3">
-          {pieces}
-        </div>
+        {train ? (
+          <div
+            ref={beltRef}
+            data-belt
+            className="pointer-events-none absolute inset-x-0 bottom-[34%] h-[clamp(112px,18vw,172px)]"
+          >
+            {pieces}
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-[34%] flex items-end justify-center gap-[clamp(8px,2.5vw,32px)] px-3">
+            {pieces}
+          </div>
+        )}
       </div>
 
       {/* level breadcrumb for the parent only — three faint dots */}
