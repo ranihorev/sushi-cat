@@ -31,8 +31,8 @@ export function Title({ profile, onStart, onParent }: Props) {
             <div className="text-lg">{'🍣'.repeat(Math.min(profile.dayStreak, 7))}</div>
           )}
 
-          {/* Three ways to play, told apart by picture alone: the plain play
-              button is the still counter, the one with the belt under it sends
+          {/* Three ways to play, told apart by picture alone: the single piece
+              of sushi is the still counter, the one with the belt under it sends
               the pieces riding round, and the cup with ears is the kitty cafe. */}
           <div className="mt-3 flex items-center gap-[clamp(20px,5vw,48px)]">
             <button
@@ -41,8 +41,12 @@ export function Title({ profile, onStart, onParent }: Props) {
               aria-label="play"
               className="big-btn grid h-[clamp(88px,14vh,124px)] w-[clamp(88px,14vh,124px)] place-items-center rounded-full bg-tamago text-nori"
             >
-              <svg viewBox="0 0 40 40" className="h-1/2 w-1/2">
-                <path d="M 13 8 L 33 20 L 13 32 Z" fill="currentColor" />
+              <svg viewBox="0 0 40 40" className="h-3/4 w-3/4">
+                {/* one piece of salmon nigiri, the thing he feeds the cat */}
+                <rect x="6" y="18" width="28" height="13" rx="6.5" fill="#fff8ec" stroke="currentColor" strokeWidth="2.2" />
+                <path d="M 5 19 Q 8 10 20 10 Q 32 10 35 19 Q 20 16 5 19 Z" fill="#ff8a65" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+                <path d="M 12 14 l 3 3 M 19 12.5 l 3 3.5 M 26 13 l 3 3" stroke="#fff8ec" strokeWidth="1.6" strokeLinecap="round" />
+                <rect x="17" y="15" width="6" height="16" rx="1.5" fill="currentColor" />
               </svg>
             </button>
 
