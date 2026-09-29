@@ -56,7 +56,7 @@ interface Props {
   petting?: boolean;
   /** which cat this is — the sushi cat is calico, the cafe has the others */
   coat?: CoatName;
-  /** the sushi chef's headband; the cafe cats are off duty */
+  /** the sushi chef's hat; the cafe cats are off duty */
   chef?: boolean;
 }
 
@@ -82,7 +82,7 @@ interface Coat {
 }
 
 export const COATS = {
-  calico: { fur: '#FFF7EA', light: '#FFFDF7', shade: '#F2E4CE', patch: '#F4A261', patch2: '#5E534D' },
+  calico: { fur: '#FFF8EE', light: '#FFFFFF', shade: '#F3E3CF', patch: '#FFAE5E', patch2: '#8A6A5A' },
   ginger: { fur: '#F7A95E', light: '#FFC994', shade: '#E8904A', stripes: '#D5742C' },
   grey: { fur: '#AEB8C2', light: '#D0D8DF', shade: '#97A3AE', stripes: '#7C8793' },
   siamese: { fur: '#F5E9D8', light: '#FFF8EE', shade: '#E6D5BD', points: '#6E5242' },
@@ -92,17 +92,31 @@ export const COATS = {
 
 export type CoatName = keyof typeof COATS;
 
-const NORI = '#20302A';
-const INK = '#20302A';
-const BLUSH = '#FFB3A0';
-/** one outline round the whole animal, so head, body and paws read as separate shapes */
-const LINE = '#3A2F2C';
-const OUTLINE = { stroke: LINE, strokeWidth: 2.6, strokeLinejoin: 'round' as const };
+const INK = '#2B1F1C';
+const BLUSH = '#FF9EAA';
+const EAR_PINK = '#FFB8C2';
+/** one soft, warm outline round the whole animal, so head, body and paws read
+    as separate shapes without the hard look of a black line */
+const LINE = '#4A3530';
+const OUTLINE = { stroke: LINE, strokeWidth: 3, strokeLinejoin: 'round' as const };
+
+/* The proportions are the whole of "cute": a head much bigger than the body,
+   the eyes big, set wide and low, and the nose and mouth small and close
+   under them. Everything else on the face is kept small so the eyes win. */
+const HEAD = { cx: 120, cy: 100, rx: 68, ry: 56 };
+/** the height of the eye centres — low on the face, which reads as young */
+const EY = 108;
+const EYE_L = 92;
+const EYE_R = 148;
 
 const TAIL =
-  'M 166 186 C 202 192, 222 170, 212 136 C 209 125, 202 117, 198 122 C 205 134, 204 154, 187 164 C 179 169, 172 171, 166 172 Z';
+  'M 164 188 C 204 194, 224 170, 212 134 C 208 122, 199 116, 195 122 C 203 136, 202 156, 184 166 C 176 170, 170 172, 164 173 Z';
 const BODY =
-  'M 62 196 C 55 189, 52 178, 52 164 C 52 136, 82 118, 120 118 C 158 118, 188 136, 188 164 C 188 178, 185 189, 178 196 Z';
+  'M 72 196 C 60 186, 58 168, 64 154 C 72 136, 94 128, 120 128 C 146 128, 168 136, 176 154 C 182 168, 180 186, 168 196 Z';
+const EAR_L = 'M 60 84 Q 50 46 62 28 Q 70 20 82 28 Q 98 40 110 56 Z';
+const EAR_R = 'M 180 84 Q 190 46 178 28 Q 170 20 158 28 Q 142 40 130 56 Z';
+const EAR_L_IN = 'M 70 70 Q 64 48 70 38 Q 76 34 84 40 Q 94 48 100 58 Z';
+const EAR_R_IN = 'M 170 70 Q 176 48 170 38 Q 164 34 156 40 Q 146 48 140 58 Z';
 
 /** The plain pleased face, for the beats where no reaction is running. */
 const PleasedExtras = () => (
@@ -245,9 +259,9 @@ function CatArt({
       return (
         <path
           className="cat-eye-pulse"
-          d={`M ${cx} ${109} c -5 -8 -16 -4 -16 5 c 0 7 10 12 16 17 c 6 -5 16 -10 16 -17 c 0 -9 -11 -13 -16 -5 Z`}
+          d={`M ${cx} ${EY + 3} c -5 -8 -16 -4 -16 5 c 0 7 10 12 16 17 c 6 -5 16 -10 16 -17 c 0 -9 -11 -13 -16 -5 Z`}
           fill="#FF5A7A"
-          style={{ transformOrigin: `${cx}px 106px` }}
+          style={{ transformOrigin: `${cx}px ${EY + 6}px` }}
         />
       );
     }
@@ -255,9 +269,9 @@ function CatArt({
       return (
         <path
           className="cat-eye-pulse"
-          d={`M ${cx} 86 l 4.5 12 l 12.5 0.6 l -9.8 8 l 3.4 12.2 l -10.6 -7 l -10.6 7 l 3.4 -12.2 l -9.8 -8 l 12.5 -0.6 Z`}
+          d={`M ${cx} ${EY - 14} l 4.5 12 l 12.5 0.6 l -9.8 8 l 3.4 12.2 l -10.6 -7 l -10.6 7 l 3.4 -12.2 l -9.8 -8 l 12.5 -0.6 Z`}
           fill="#F7C744"
-          style={{ transformOrigin: `${cx}px 100px` }}
+          style={{ transformOrigin: `${cx}px ${EY}px` }}
         />
       );
     }
@@ -265,14 +279,14 @@ function CatArt({
       return (
         <g
           className="cat-spin-slow"
-          style={{ transformOrigin: `${cx}px 100px` }}
+          style={{ transformOrigin: `${cx}px ${EY}px` }}
           stroke={INK}
           strokeWidth="2.6"
           fill="none"
           strokeLinecap="round"
         >
           <path
-            d={`M ${cx} 100 m 0 -2 a 2 2 0 1 1 -2 2 a 5 5 0 1 0 5 -5 a 8.5 8.5 0 1 0 -8.5 8.5`}
+            d={`M ${cx} ${EY} m 0 -2 a 2 2 0 1 1 -2 2 a 5 5 0 1 0 5 -5 a 8.5 8.5 0 1 0 -8.5 8.5`}
           />
         </g>
       );
@@ -282,11 +296,11 @@ function CatArt({
       return (
         <g>
           <path
-            d={`M ${cx - 9} 100 a 9 9 0 0 0 18 0 Z`}
+            d={`M ${cx - 11} ${EY} a 11 11 0 0 0 22 0 Z`}
             fill={INK}
           />
           <path
-            d={`M ${cx - 10} 100 h 20`}
+            d={`M ${cx - 12} ${EY} h 24`}
             stroke={INK}
             strokeWidth="3.4"
             strokeLinecap="round"
@@ -301,7 +315,7 @@ function CatArt({
       const dir = yuck ? 1 : happy || eating || asleep ? -1 : 0.15;
       return (
         <path
-          d={`M ${cx - 9} ${yuck ? 103 : 101} q 9 ${8 * dir} 18 0`}
+          d={`M ${cx - 10} ${yuck ? EY + 3 : EY + 1} q 10 ${9 * dir} 20 0`}
           stroke={INK}
           strokeWidth={yuck ? 4.6 : 4}
           strokeLinecap="round"
@@ -310,15 +324,17 @@ function CatArt({
       );
     }
     // pupils widen when a piece is on the way in, and drop to the piece he sniffs
-    const r = eyesWide ? 1.34 : anticipating ? 1.18 : 1;
-    const cy = sniffing ? 105 : 100;
+    const r = eyesWide ? 1.22 : anticipating ? 1.1 : 1;
+    const cy = sniffing ? EY + 5 : EY;
+    const x = cx + px;
     return (
       <g>
-        <ellipse cx={cx + px} cy={cy} rx={9.5 * r} ry={11 * r} fill={INK} />
-        {/* a warm glint low in the eye — the cheapest way to make them shine */}
-        <ellipse cx={cx + px} cy={cy + 5 * r} rx={6 * r} ry={3.5 * r} fill="#4E7A5E" opacity="0.8" />
-        <circle cx={cx + px + 3.4} cy={cy - 4.4} r={3.6 * r} fill="#fff" />
-        <circle cx={cx + px - 2.5} cy={cy + 3.5} r="1.5" fill="#fff" opacity="0.75" />
+        <ellipse cx={x} cy={cy} rx={12.5 * r} ry={14.5 * r} fill={url('eye')} />
+        {/* two big catch-lights, up and to one side, and a small one below —
+            this is most of what makes the face read as sweet */}
+        <circle cx={x + 4.6 * r} cy={cy - 5.6 * r} r={5.2 * r} fill="#fff" />
+        <circle cx={x - 5 * r} cy={cy - 1 * r} r={2.2 * r} fill="#fff" opacity="0.9" />
+        <circle cx={x + 3 * r} cy={cy + 7 * r} r={1.6 * r} fill="#fff" opacity="0.7" />
       </g>
     );
   };
@@ -398,15 +414,15 @@ function CatArt({
     : null;
 
   const mouth = rxMouth ?? (eating ? (
-    <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 124px' }}>
-      <ellipse cx="120" cy="127" rx={chewing ? 11 : 17} ry={chewing ? 9 : 15} fill="#7A2E33" />
-      <ellipse cx="120" cy={chewing ? 131 : 134} rx={chewing ? 7 : 10} ry={5} fill="#F4837E" />
+    <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 130px' }}>
+      <ellipse cx="120" cy="132" rx={chewing ? 10 : 15} ry={chewing ? 8 : 13} fill="#7A2E33" />
+      <ellipse cx="120" cy={chewing ? 136 : 139} rx={chewing ? 6 : 9} ry={4.5} fill="#F4837E" />
     </g>
   ) : anticipating ? (
-    <ellipse cx="120" cy="126" rx="11" ry="10" fill="#7A2E33" />
+    <ellipse cx="120" cy="131" rx="9" ry="8" fill="#7A2E33" />
   ) : sniffing ? (
     // pursed, the way a mouth goes when the nose is doing the work
-    <ellipse cx="120" cy="126" rx="5.5" ry="4.5" fill="#7A2E33" />
+    <ellipse cx="120" cy="129" rx="5" ry="4" fill="#7A2E33" />
   ) : yuck ? (
     /* Open, flat, and with the tongue right out. This is the one pose in the
        whole game that says "no" without a word in it, so it is drawn big. */
@@ -433,9 +449,9 @@ function CatArt({
   ) : asleep ? (
     <path d="M 114 124 q 6 5 12 0" stroke={INK} strokeWidth="3" fill="none" strokeLinecap="round" />
   ) : (
-    <g stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round">
-      <path d="M 108 123 q 6 7 12 0" />
-      <path d="M 120 123 q 6 7 12 0" />
+    <g stroke={INK} strokeWidth="2.8" fill="none" strokeLinecap="round">
+      <path d="M 111 125 q 4.5 6 9 0" />
+      <path d="M 120 125 q 4.5 6 9 0" />
     </g>
   ));
 
@@ -492,13 +508,14 @@ function CatArt({
           <stop offset="52%" stopColor="#000" stopOpacity="0.1" />
           <stop offset="100%" stopColor="#000" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id={id('band')} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#2B4038" />
-          <stop offset="50%" stopColor={NORI} />
-          <stop offset="100%" stopColor="#2B4038" />
+        {/* the eye is darkest at the top and warms to brown at the bottom,
+            the way a drawn cartoon eye catches the light */}
+        <linearGradient id={id('eye')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="45%" stopColor={INK} />
+          <stop offset="100%" stopColor="#7A4E3A" />
         </linearGradient>
         <clipPath id={id('head')}>
-          <ellipse cx="120" cy="98" rx="55" ry="49" />
+          <ellipse {...HEAD} />
         </clipPath>
         <clipPath id={id('tail')}>
           <path d={TAIL} />
@@ -541,43 +558,44 @@ function CatArt({
             <path d={TAIL} fill="none" {...OUTLINE} />
           </g>
 
-          {/* body — a sitting silhouette, wide at the base and narrowing to the
-              shoulders. An ellipse read as a ball with a head stuck on it. */}
+          {/* body — a small, round sitting shape tucked under the big head.
+              The head does the talking; the body is only there to sit on. */}
           <path d={BODY} fill={url('fur')} {...OUTLINE} />
           <g clipPath={url('body')}>
-            {coat.patch2 && <ellipse cx="66" cy="150" rx="24" ry="20" fill={coat.patch2} />}
-            {coat.patch && <ellipse cx="182" cy="178" rx="26" ry="22" fill={coat.patch} />}
+            {coat.patch2 && <ellipse cx="68" cy="158" rx="18" ry="16" fill={coat.patch2} />}
+            {coat.patch && <ellipse cx="176" cy="176" rx="22" ry="20" fill={coat.patch} />}
             {coat.stripes && (
               <g stroke={coat.stripes} strokeWidth="5" strokeLinecap="round" fill="none">
-                <path d="M 52 150 q 12 2 18 10" />
-                <path d="M 54 170 q 12 0 17 8" />
-                <path d="M 188 150 q -12 2 -18 10" />
-                <path d="M 186 170 q -12 0 -17 8" />
+                <path d="M 62 160 q 10 2 15 9" />
+                <path d="M 64 177 q 10 0 14 7" />
+                <path d="M 178 160 q -10 2 -15 9" />
+                <path d="M 176 177 q -10 0 -14 7" />
               </g>
             )}
           </g>
           {/* chest marking — a pale bib, which is what makes him look fluffy */}
-          <ellipse cx="120" cy="170" rx="34" ry="25" fill="#FFFDF7" opacity={coat.stripes ? 0.55 : 0.5} />
+          <ellipse cx="120" cy="174" rx="30" ry="22" fill="#FFFFFF" opacity={coat.stripes ? 0.55 : 0.6} />
+          <path d={BODY} fill="none" {...OUTLINE} />
 
-          {/* front paws */}
-          <ellipse cx="93" cy="190" rx="18" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
-          <ellipse cx="147" cy="190" rx="18" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
-          <g stroke={coat.points ? coat.light : LINE} strokeWidth="1.8" strokeLinecap="round" opacity="0.6">
-            <line x1="89" y1="185" x2="89" y2="193" />
-            <line x1="97" y1="184" x2="97" y2="193" />
-            <line x1="143" y1="185" x2="143" y2="193" />
-            <line x1="151" y1="184" x2="151" y2="193" />
+          {/* front paws — little round beans */}
+          <ellipse cx="98" cy="191" rx="15" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
+          <ellipse cx="142" cy="191" rx="15" ry="10" fill={coat.points ?? coat.light} {...OUTLINE} />
+          <g stroke={coat.points ? coat.light : LINE} strokeWidth="2" strokeLinecap="round" opacity="0.5">
+            <line x1="95" y1="188" x2="95" y2="194" />
+            <line x1="101" y1="188" x2="101" y2="194" />
+            <line x1="139" y1="188" x2="139" y2="194" />
+            <line x1="145" y1="188" x2="145" y2="194" />
           </g>
 
           {/* the head casts onto the chest — without this the two shapes merge
               into a single blob and the cat has no chin. Soft-edged: a plain
               ellipse here reads as a grey smudge on the chest. */}
-          <ellipse cx="120" cy="118" rx="58" ry="48" fill={url('chin')} />
+          <ellipse cx="120" cy="126" rx="70" ry="50" fill={url('chin')} />
 
           {/* head — cranes forward over food, shakes itself clear of a bad smell */}
           <g
             className={yuck ? 'cat-headshake' : anticipating || sniffing ? 'cat-crane' : undefined}
-            style={{ transformOrigin: '120px 140px' }}
+            style={{ transformOrigin: '120px 150px' }}
           >
             {/* ears, behind the head so their bases disappear into it. They go
                 flat against the head for `yuck` — the tell every child who has
@@ -586,114 +604,102 @@ function CatArt({
               className={
                 yuck ? 'cat-ear-flat-l' : fidget === 'ear' ? 'cat-ear-twitch' : undefined
               }
-              style={{ transformOrigin: '80px 76px' }}
+              style={{ transformOrigin: '80px 72px' }}
             >
-              <path d="M 78 80 Q 60 44 66 28 Q 92 38 112 58 Z" fill={coat.points ?? coat.patch2 ?? FUR} {...OUTLINE} />
-              <path d="M 86 72 Q 74 50 76 40 Q 92 48 104 60 Z" fill={BLUSH} />
+              <path d={EAR_L} fill={coat.points ?? coat.patch2 ?? FUR} {...OUTLINE} />
+              <path d={EAR_L_IN} fill={EAR_PINK} />
             </g>
             <g
               className={yuck ? 'cat-ear-flat-r' : undefined}
-              style={{ transformOrigin: '160px 76px' }}
+              style={{ transformOrigin: '160px 72px' }}
             >
-              <path d="M 162 80 Q 180 44 174 28 Q 148 38 128 58 Z" fill={coat.points ?? coat.patch ?? FUR} {...OUTLINE} />
-              <path d="M 154 72 Q 166 50 164 40 Q 148 48 136 60 Z" fill={BLUSH} />
+              <path d={EAR_R} fill={coat.points ?? coat.patch ?? FUR} {...OUTLINE} />
+              <path d={EAR_R_IN} fill={EAR_PINK} />
             </g>
 
-            {/* head */}
-            <ellipse cx="120" cy="98" rx="55" ry="49" fill={url('fur')} {...OUTLINE} />
+            {/* head — wider than it is tall, like a rice cake */}
+            <ellipse {...HEAD} fill={url('fur')} />
             <g clipPath={url('head')}>
-              {coat.patch && <ellipse cx="156" cy="70" rx="32" ry="28" fill={coat.patch} />}
-              {coat.patch2 && <ellipse cx="80" cy="58" rx="22" ry="16" fill={coat.patch2} />}
+              {coat.patch && <ellipse cx="166" cy="62" rx="34" ry="26" fill={coat.patch} />}
+              {coat.patch2 && <ellipse cx="72" cy="56" rx="22" ry="16" fill={coat.patch2} />}
               {coat.points && (
-                <ellipse cx="120" cy="120" rx="26" ry="20" fill={coat.points} opacity="0.75" />
+                <ellipse cx="120" cy="126" rx="28" ry="20" fill={coat.points} opacity="0.7" />
               )}
               {coat.stripes && (
                 <g stroke={coat.stripes} strokeWidth="4" strokeLinecap="round" fill="none">
-                  <path d="M 110 52 l 3 13" />
-                  <path d="M 120 50 v 15" />
-                  <path d="M 130 52 l -3 13" />
-                  <path d="M 66 100 h 12" />
-                  <path d="M 67 110 h 10" />
-                  <path d="M 174 100 h -12" />
-                  <path d="M 173 110 h -10" />
+                  <path d="M 110 48 l 3 12" />
+                  <path d="M 120 46 v 14" />
+                  <path d="M 130 48 l -3 12" />
+                  <path d="M 52 104 h 12" />
+                  <path d="M 53 114 h 10" />
+                  <path d="M 188 104 h -12" />
+                  <path d="M 187 114 h -10" />
                 </g>
               )}
-              {/* the pale muzzle, which gives the mouth something to sit on */}
-              <ellipse cx="111" cy="124" rx="13" ry="10" fill="#FFFDF7" opacity="0.5" />
-              <ellipse cx="129" cy="124" rx="13" ry="10" fill="#FFFDF7" opacity="0.5" />
             </g>
-            {/* redrawn over the patches, so they sit inside the outline */}
-            <ellipse cx="120" cy="98" rx="55" ry="49" fill="none" {...OUTLINE} />
+            {/* drawn over the patches, so they sit inside the outline */}
+            <ellipse {...HEAD} fill="none" {...OUTLINE} />
 
-            {/* hachimaki — high on the head, clear of the eyes, knotted at the
-                side with two ends trailing off it */}
+            {/* a little white chef's hat, set at an angle between the ears */}
             {chef && (
-              <g>
+              <g transform="translate(0 5) rotate(-10 120 50)">
                 <path
-                  d="M 70 70 Q 120 46 170 70 L 172 82 Q 120 58 68 82 Z"
-                  fill={url('band')}
+                  d="M 102 50 C 90 48, 90 30, 102 30 C 104 18, 120 14, 126 24 C 136 16, 152 26, 142 38 C 148 44, 144 52, 138 50 Z"
+                  fill="#FFFFFF"
                   {...OUTLINE}
-                  strokeWidth={2}
                 />
-                <path d="M 168 72 q 16 -4 22 -14 q 2 10 -8 18 Z" fill={NORI} {...OUTLINE} strokeWidth={2} />
-                <path d="M 168 78 q 18 4 24 16 q -12 0 -20 -8 Z" fill={NORI} {...OUTLINE} strokeWidth={2} />
-                <circle cx="168" cy="76" r="5" fill="#FF8A65" {...OUTLINE} strokeWidth={2} />
+                <rect x="101" y="44" width="38" height="12" rx="4" fill="#FFFFFF" {...OUTLINE} />
+                <path d="M 112 36 q 2 -6 6 -8" stroke="#E7E1D8" strokeWidth="3" fill="none" strokeLinecap="round" />
               </g>
             )}
 
+            <Eye cx={EYE_L} />
+            <Eye cx={EYE_R} />
 
-            <Eye cx={100} />
-            <Eye cx={140} />
+            {/* blush — round and rosy, deepens when pleased or full */}
+            {[EYE_L - 14, EYE_R + 14].map((x) => (
+              <ellipse
+                key={x}
+                cx={x}
+                cy={EY + 18}
+                rx="11"
+                ry="7"
+                fill={BLUSH}
+                opacity={rx === 'spicy' ? 1 : happy || eating || petting ? 0.85 : 0.55 + fullness * 0.25}
+              />
+            ))}
 
-            {/* blush — deepens when pleased or full */}
-            <ellipse
-              cx="91"
-              cy="131"
-              rx="10.5"
-              ry="6.5"
-              fill={BLUSH}
-              opacity={rx === 'spicy' ? 1 : happy || eating || petting ? 0.78 : 0.42 + fullness * 0.25}
-            />
-            <ellipse
-              cx="149"
-              cy="131"
-              rx="10.5"
-              ry="6.5"
-              fill={BLUSH}
-              opacity={rx === 'spicy' ? 1 : happy || eating || petting ? 0.78 : 0.42 + fullness * 0.25}
-            />
-
-            {/* nose — it twitches while he works out what he has been given */}
+            {/* nose — a small pink heart; it twitches while he works out what
+                he has been given */}
             <g
               className={sniffing ? 'cat-nose-twitch' : undefined}
-              style={{ transformOrigin: '120px 117px' }}
+              style={{ transformOrigin: '120px 120px' }}
             >
-              <path d="M 114 114 L 126 114 L 120 121 Z" fill="#FF8A65" />
-              <line x1="120" y1="121" x2="120" y2="124" stroke={INK} strokeWidth="2.4" strokeLinecap="round" />
+              <path
+                d="M 120 123 C 114 119, 113 116, 116 115 C 118 114.5, 119.5 115.5, 120 116.5 C 120.5 115.5, 122 114.5, 124 115 C 127 116, 126 119, 120 123 Z"
+                fill="#FF7F96"
+                stroke={LINE}
+                strokeWidth="1.2"
+                strokeLinejoin="round"
+              />
             </g>
             {/* the wrinkle over the nose that comes with the tongue */}
             {yuck && (
               <g stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.55">
-                <path d="M 112 108 q 8 -5 16 0" />
-                <path d="M 114 103 q 6 -4 12 0" />
+                <path d="M 113 110 q 7 -4 14 0" />
+                <path d="M 115 105 q 5 -3 10 0" />
               </g>
             )}
 
             {mouth}
 
-            {/* whiskers — rooted at the muzzle and curved. Anchored out at the
-                edge of the head they read as loose scratches floating in air. */}
-            <g
-              stroke="#A2988A"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              fill="none"
-              opacity="0.75"
-            >
-              <path d="M 108 113 Q 86 109 54 103" />
-              <path d="M 108 120 Q 86 122 52 127" />
-              <path d="M 132 113 Q 154 109 186 103" />
-              <path d="M 132 120 Q 154 122 188 127" />
+            {/* whiskers — three short ones each side, poking out past the
+                cheeks. Long ones across the face hide the eyes and blush. */}
+            <g stroke={LINE} strokeWidth="2.2" strokeLinecap="round" fill="none" opacity="0.7">
+              <path d="M 58 110 q -10 -3 -20 -4" />
+              <path d="M 57 118 q -10 0 -20 2" />
+              <path d="M 182 110 q 10 -3 20 -4" />
+              <path d="M 183 118 q 10 0 20 2" />
             </g>
           </g>
 
@@ -705,13 +711,13 @@ function CatArt({
             </g>
           )}
           {/* the curls of smell coming off whatever is under his nose. Kept
-              clear of the head, where they would cross the headband. */}
+              clear of the head, where they would cross the hat. */}
           {sniffing && (
             <g stroke="#BFE3D0" strokeLinecap="round" fill="none">
-              <path className="cat-whiff" d="M 184 120 q 9 -9 0 -18 q -9 -9 0 -18" strokeWidth="3" />
+              <path className="cat-whiff" d="M 212 124 q 9 -9 0 -18 q -9 -9 0 -18" strokeWidth="3" />
               <path
                 className="cat-whiff cat-whiff-2"
-                d="M 199 116 q 7 -7 0 -14 q -7 -7 0 -14"
+                d="M 226 118 q 7 -7 0 -14 q -7 -7 0 -14"
                 strokeWidth="2.4"
                 opacity="0.75"
               />

@@ -35,7 +35,7 @@ function PlateRow({ eaten, total }: Props) {
                 <rect x="15" y="9" width="11" height="20" rx="2.5" fill="#20302A" />
               </svg>
             ) : (
-              <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+              <div className="h-2.5 w-2.5 rounded-full bg-white/45" />
             )}
           </div>
         );
