@@ -22,7 +22,7 @@ interface Props {
 }
 
 const barColor = (solid: boolean, seen: number) => {
-  if (seen === 0) return '#3A4A44';
+  if (seen === 0) return '#E6DCD6';
   if (solid) return '#8FC46B';
   return '#F7C744';
 };
@@ -50,23 +50,23 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
   const alphabetSolid = lettersSolid(profile);
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-nori-deep px-5 py-6 text-rice">
+    <div className="h-full w-full overflow-y-auto bg-cream px-5 py-6 text-ink">
       <div className="mx-auto max-w-3xl">
         <header className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-extrabold">Progress</h2>
-            <p className="text-sm text-white/50">
+            <h2 className="text-3xl font-bold text-berry">Progress</h2>
+            <p className="text-sm text-ink/60">
               {profile.mealsCompleted} meals · {solid}/{profile.activeSet.length} of the current
               set solid · level {profile.level} · {profile.dayStreak}-day streak
             </p>
             <div className="mt-2 flex items-center gap-2">
-              <div className="h-2 w-44 overflow-hidden rounded-full bg-white/10">
+              <div className="h-2 w-44 overflow-hidden rounded-full bg-ink/10">
                 <div
                   className="h-full rounded-full bg-[#8FC46B] transition-all"
                   style={{ width: `${(alphabetSolid / 26) * 100}%` }}
                 />
               </div>
-              <span className="text-xs text-white/40">
+              <span className="text-xs text-ink/55">
                 {alphabetSolid}/26 of the alphabet · {profile.activeSet.length} introduced
               </span>
             </div>
@@ -74,7 +74,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
           <button
             type="button"
             onPointerDown={onClose}
-            className="rounded-full bg-tamago px-6 py-3 font-extrabold text-nori"
+            className="big-btn rounded-full bg-tamago px-7 py-2.5 text-lg text-ink"
           >
             Done
           </button>
@@ -82,18 +82,18 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
 
         <section className="mb-8">
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-bold tracking-wide text-white/50 uppercase">
+            <h3 className="text-sm font-bold tracking-wide text-ink/60 uppercase">
               Letters — tap to add or remove from the active set
             </h3>
             <button
               type="button"
               onClick={() => onProfileChange(unlockAllLetters)}
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/70"
+              className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-ink/75"
             >
               Introduce all 26 now
             </button>
           </div>
-          <p className="mb-2 text-xs text-white/35">
+          <p className="mb-2 text-xs text-ink/50">
             A letter counts as solid once he's had it {WINDOW} times and got {NEEDED} of those
             right first try. New letters unlock on their own, 2–3 at a time, once most of the
             current set is solid. Only override that if he's clearly bored.
@@ -110,7 +110,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 <div
                   key={l}
                   className={`rounded-xl border-2 p-2 text-left transition-colors ${
-                    active ? 'border-white/25 bg-white/10' : 'border-transparent bg-white/[0.03] opacity-45'
+                    active ? 'border-berry/50 bg-white shadow-[0_3px_0_rgba(59,42,58,0.12)]' : 'border-transparent bg-white/50 opacity-50'
                   }`}
                 >
                   <button
@@ -121,16 +121,16 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                   >
                     <div className="flex items-baseline justify-between">
                       <span className="text-2xl font-extrabold">{l}</span>
-                      <span className="text-xs text-white/45">{LETTERS[l].sound}</span>
+                      <span className="text-xs text-ink/55">{LETTERS[l].sound}</span>
                     </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink/10">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{ width: `${pct}%`, background: barColor(isSolid(profile, l), s.seen) }}
                       />
                     </div>
                   </button>
-                  <div className="mt-1 flex items-center justify-between text-[11px] text-white/40">
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-ink/55">
                     <span title={`${s.correct} of ${s.seen} all time`}>
                       {right}/{s.recent.length} recent
                     </span>
@@ -141,7 +141,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                         audio.unlock();
                         void audio.speak([`prompt/${l}`, 400, `confirm/${l}`]);
                       }}
-                      className="rounded px-1 hover:text-white"
+                      className="rounded px-1 text-berry"
                     >
                       ▶︎
                     </button>
@@ -154,8 +154,8 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
 
         <section className="mb-8 grid gap-5 sm:grid-cols-2">
           <label className="block">
-            <span className="text-sm font-bold text-white/60">Child's name</span>
-            <p className="mb-2 text-xs text-white/35">
+            <span className="text-sm font-bold text-ink/70">Child's name</span>
+            <p className="mb-2 text-xs text-ink/50">
               His own letters get added to the active set — personal relevance beats optimal
               ordering at this age.
             </p>
@@ -164,12 +164,12 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Tom"
-                className="min-w-0 flex-1 rounded-lg bg-white/10 px-3 py-2 font-bold outline-none placeholder:text-white/25"
+                className="min-w-0 flex-1 rounded-lg border-2 border-ink/10 bg-white px-3 py-2 font-bold outline-none placeholder:text-ink/30"
               />
               <button
                 type="button"
                 onClick={() => onProfileChange((p) => withNameLetters(p, name))}
-                className="rounded-lg bg-white/15 px-4 py-2 font-bold"
+                className="rounded-lg bg-mint px-4 py-2 font-bold text-white"
               >
                 Add
               </button>
@@ -177,11 +177,11 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
           </label>
 
           <div className="space-y-3">
-            <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 shadow-[0_2px_0_rgba(59,42,58,0.1)]">
               <span className="text-sm">
                 <span className="font-bold">Wait for the prompt</span>
                 <br />
-                <span className="text-xs text-white/40">
+                <span className="text-xs text-ink/55">
                   Hide the sushi until the sound has finished — use if he taps at random.
                 </span>
               </span>
@@ -198,7 +198,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
               />
             </label>
 
-            <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 shadow-[0_2px_0_rgba(59,42,58,0.1)]">
               <span className="text-sm font-bold">Pieces per meal</span>
               <input
                 type="number"
@@ -211,14 +211,14 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') e.currentTarget.blur();
                 }}
-                className="w-20 rounded-lg bg-white/10 px-3 py-2 text-center font-bold outline-none"
+                className="w-20 rounded-lg border-2 border-ink/10 bg-white px-3 py-2 text-center font-bold outline-none"
               />
             </label>
           </div>
         </section>
 
         <section className="mb-10">
-          <h3 className="mb-2 text-sm font-bold tracking-wide text-white/50 uppercase">
+          <h3 className="mb-2 text-sm font-bold tracking-wide text-ink/60 uppercase">
             Mix-ups he makes
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -228,21 +228,21 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 .map(([tapped, n]) => (
                   <span
                     key={`${target}-${tapped}`}
-                    className="rounded-lg bg-white/8 px-3 py-1.5 text-sm"
+                    className="rounded-lg bg-white px-3 py-1.5 text-sm shadow-[0_2px_0_rgba(59,42,58,0.1)]"
                   >
-                    <b>{target}</b> → {tapped} <span className="text-white/40">×{n}</span>
+                    <b>{target}</b> → {tapped} <span className="text-ink/55">×{n}</span>
                   </span>
                 )),
             )}
             {!Object.values(profile.confusions).some((row) =>
               Object.values(row ?? {}).some((n) => (n ?? 0) >= 2),
             ) && (
-              <span className="text-sm text-white/35">Nothing yet.</span>
+              <span className="text-sm text-ink/50">Nothing yet.</span>
             )}
           </div>
         </section>
 
-        <section className="flex flex-wrap gap-3 border-t border-white/10 pt-5">
+        <section className="flex flex-wrap gap-3 border-t border-ink/10 pt-5">
           <button
             type="button"
             onClick={() =>
@@ -252,7 +252,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 ...CAT_CLIPS,
               ])
             }
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-bold"
+            className="rounded-lg bg-white px-4 py-2 text-sm font-bold"
           >
             Cache all audio for offline
           </button>
@@ -265,7 +265,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                 setMeals('8');
               }
             }}
-            className="rounded-lg bg-red-500/15 px-4 py-2 text-sm font-bold text-red-300"
+            className="rounded-lg bg-red-100 px-4 py-2 text-sm font-bold text-red-600"
           >
             Reset progress
           </button>

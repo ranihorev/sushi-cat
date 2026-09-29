@@ -724,7 +724,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
 
           <div className="mt-1 flex items-center gap-3">
             {wordHint && (
-              <span className="rounded-full bg-black/35 px-4 py-1.5 text-lg font-bold text-white/75">
+              <span className="rounded-full bg-white/90 px-4 py-1.5 text-lg font-semibold text-ink shadow-[0_4px_0_rgba(59,42,58,0.2)]">
                 {wordHint}
               </span>
             )}
@@ -735,10 +735,10 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
                 audio.unlock();
                 replayPrompt(round);
               }}
-              className="pointer-events-auto relative grid h-[clamp(54px,8vh,72px)] w-[clamp(54px,8vh,72px)] place-items-center rounded-full bg-nori/40 active:scale-95"
+              className="bubble-btn pointer-events-auto relative grid h-[clamp(58px,8.5vh,78px)] w-[clamp(58px,8.5vh,78px)] place-items-center rounded-full"
             >
-              <span className="pulse-ring absolute inset-0 rounded-full border-4 border-tamago/40" />
-              <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-rice">
+              <span className="pulse-ring absolute inset-0 rounded-full border-4 border-white/70" />
+              <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-sky">
                 <path d="M4 9v6h4l5 4V5L8 9H4z" />
                 <path
                   d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"
@@ -746,7 +746,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
-                  className="stroke-rice"
+                  className="stroke-sky"
                 />
               </svg>
             </button>

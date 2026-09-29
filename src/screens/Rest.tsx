@@ -64,7 +64,7 @@ export function Rest({
                 audio.unlock();
                 void audio.oneShot(confirmClip(l));
               }}
-              className="plate-pop grid h-11 w-11 place-items-center rounded-xl border-0 text-xl font-extrabold text-nori active:scale-90"
+              className="plate-pop grid h-[clamp(44px,7vh,60px)] w-[clamp(44px,7vh,60px)] place-items-center rounded-2xl border-4 border-white text-[clamp(22px,3.6vh,32px)] font-bold text-ink shadow-[0_5px_0_rgba(59,42,58,0.25)] active:scale-90"
               style={{
                 background: TOPPING_COLORS[LETTERS[l].topping].fill,
                 animationDelay: `${i * 70}ms`,
@@ -77,10 +77,10 @@ export function Rest({
         </div>
 
         {showReward && unlockedLetters.length > 0 && (
-          <div className="cat-pop flex items-center gap-2 rounded-2xl bg-black/35 px-5 py-3">
-            <span className="text-2xl">✨</span>
+          <div className="cat-pop flex items-center gap-3 rounded-3xl border-4 border-tamago bg-white px-6 py-3 shadow-[0_6px_0_rgba(59,42,58,0.25)]">
+            <span className="text-3xl">🌟</span>
             {unlockedLetters.map((l) => (
-              <span key={l} className="text-3xl font-extrabold text-tamago">
+              <span key={l} className="text-4xl font-bold text-berry">
                 {l}
               </span>
             ))}
@@ -92,9 +92,9 @@ export function Rest({
               type="button"
               onPointerDown={onHome}
               aria-label="home"
-              className="big-btn grid h-[clamp(62px,9vh,80px)] w-[clamp(62px,9vh,80px)] place-items-center rounded-full bg-white/15"
+              className="big-btn grid h-[clamp(66px,9.5vh,86px)] w-[clamp(66px,9.5vh,86px)] place-items-center rounded-full bg-sky"
             >
-              <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-rice">
+              <svg viewBox="0 0 24 24" className="h-1/2 w-1/2 fill-white">
                 <path d="M12 3 2 12h3v9h6v-6h2v6h6v-9h3L12 3z" />
               </svg>
             </button>
@@ -102,9 +102,9 @@ export function Rest({
               type="button"
               onPointerDown={onAgain}
               aria-label="play again"
-              className="big-btn grid h-[clamp(88px,13vh,120px)] w-[clamp(88px,13vh,120px)] place-items-center rounded-full bg-tamago text-nori"
+              className="big-btn grid h-[clamp(92px,14vh,128px)] w-[clamp(92px,14vh,128px)] place-items-center rounded-full bg-tamago text-ink"
             >
-              <svg viewBox="0 0 40 40" className="h-1/2 w-1/2">
+              <svg viewBox="0 0 40 40" className="btn-breathe h-1/2 w-1/2">
                 <path d="M 13 8 L 33 20 L 13 32 Z" fill="currentColor" />
               </svg>
             </button>
