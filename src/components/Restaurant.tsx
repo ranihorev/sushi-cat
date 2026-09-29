@@ -28,7 +28,7 @@ const lantern = (x: number, color: string, key: string) => (
     </g>
     <rect x={x - 12} y="50" width="24" height="8" rx="3" fill="#2C3A34" />
     <rect x={x - 12} y="114" width="24" height="8" rx="3" fill="#2C3A34" />
-    <ellipse cx={x} cy="86" rx="44" ry="52" fill={color} opacity="0.14" />
+    <ellipse cx={x} cy="86" rx="44" ry="52" fill="#FFF1C9" opacity="0.22" />
   </g>
 );
 
@@ -418,12 +418,14 @@ function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {/* wall */}
+      {/* wall — a bright, warm mint rather than a dark night teal. A four year
+          old reads a dark room as a sleepy or a scary one, and the cat and the
+          sushi are cream and pastel, so a mid tone keeps them standing out. */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(120% 80% at 50% 0%, rgba(255,178,94,0.22) 0%, rgba(255,178,94,0) 60%), linear-gradient(180deg,#123A3A 0%,#0E2E30 55%,#0A2426 100%)',
+            'radial-gradient(110% 75% at 50% 18%, rgba(255,226,170,0.55) 0%, rgba(255,210,140,0) 62%), linear-gradient(180deg,#5DB8A6 0%,#3F9A8C 55%,#2E7F75 100%)',
         }}
       />
       <div
@@ -433,6 +435,14 @@ function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
             'repeating-linear-gradient(180deg,transparent 0 68px,#ffffff 68px 70px)',
         }}
       />
+      {/* a soft round polka dot, like the wallpaper of a toy shop */}
+      <div
+        className="absolute inset-0 opacity-[0.09]"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 50% 50%, #ffffff 0 5px, transparent 6px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
 
       {/* noren curtain */}
       <svg
@@ -440,13 +450,16 @@ function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
         preserveAspectRatio="none"
         className="absolute inset-x-0 top-0 h-[clamp(40px,7vh,74px)] w-full"
       >
-        <rect x="0" y="0" width="800" height="14" fill="#1A2B26" />
+        <rect x="0" y="0" width="800" height="14" fill="#8E5C2F" />
         {[0, 1, 2, 3, 4].map((i) => (
           <path
             key={i}
             d={`M ${i * 160} 12 h 152 v 46 q -76 14 -152 0 Z`}
-            fill={i % 2 ? '#25493F' : '#1F3C35'}
+            fill={i % 2 ? '#F07C6C' : '#E4574F'}
           />
+        ))}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <circle key={i} cx={i * 160 + 76} cy="34" r="9" fill="#FFFBF2" opacity="0.9" />
         ))}
       </svg>
 
