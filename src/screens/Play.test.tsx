@@ -5,7 +5,7 @@ import { CAT_CLIPS } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { blankProfile } from '../game/store';
 import type { Profile } from '../game/types';
-import { CLIP_MS, clipDurations, cutLog, playLog } from '../test/audio-stub';
+import { CLIP_MS, clipDurations, contextLock, cutLog, lastContext, playLog } from '../test/audio-stub';
 import { Play } from './Play';
 
 /* jsdom has no layout, so every element's rect is 0x0 at the origin. `overCat`
@@ -465,6 +465,18 @@ describe('gestures that are not an answer', () => {
     expect(profileSeen.letterStats).toEqual({});
   });
 
+  it('still asks again if he stalls after putting a piece down elsewhere', async () => {
+    await start();
+    const target = targetOnScreen();
+    dragTo(optionsOnScreen()[0], AWAY);
+    await tick(500);
+    playLog.length = 0;
+
+    await tick(9000);
+
+    expect(playLog).toEqual(expect.arrayContaining([`letter/${target}`, `prompt/${target}`]));
+  });
+
   it('nudges rather than answers when he taps instead of dragging', async () => {
     await start();
     const target = targetOnScreen();
@@ -653,6 +665,26 @@ describe('under StrictMode', () => {
     expect(playLog).toContain('cat/nom');
     expect(profileSeen.letterStats[target]).toMatchObject({ seen: 1, correct: 1 });
     expect(screen.getByLabelText(/1 of 8/)).toBeTruthy();
+  });
+});
+
+describe('when the tablet takes the sound away', () => {
+  /* iPadOS leaves the audio 'interrupted' after the screen locks, and a clip
+     started then never ends. Every step of a round waits on its clips, so the
+     game used to stop dead: the cat never swallowed, and the pieces stayed
+     shut against his touch. */
+  it('still moves on to the next question', async () => {
+    await start();
+    const first = targetOnScreen();
+    contextLock.stuck = true;
+    lastContext().state = 'interrupted' as AudioContextState;
+
+    dragTo(first, ON_CAT);
+    await settleRound();
+    await tick(6000);
+
+    expect(screen.getByLabelText('1 of 8 eaten')).toBeTruthy();
+    expect(piece(optionsOnScreen()[0]).hasAttribute('disabled')).toBe(false);
   });
 });
 

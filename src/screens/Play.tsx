@@ -102,6 +102,8 @@ const REACTION_SOUND: Record<Reaction, () => void> = {
    letter. It also stands still while the cat is eating or refusing, because
    the piece's flight to the cat is measured from its place on the belt. */
 const BELT_PX_PER_S = 55;
+/** from one piece on the belt to the next, in piece widths: a short gap between */
+const BELT_STEP = 1.3;
 
 /** he is on a run — the room lights up */
 const FEVER_AT = 3;
@@ -565,6 +567,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
       return;
     }
     if (!locked) setMood('idle');
+    /* The grab stopped the idle clock; put it back, or a piece carried off and
+       set down somewhere else leaves him in silence for the rest of the round. */
+    setHeard((n) => n + 1);
     if (!g.moved) {
       /* He tapped instead of dragging. Rather than nothing happening, the piece
          hops to show it wants to be carried, and the sound plays again. */
@@ -584,19 +589,27 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
 
   /* Positions are written straight onto the slots rather than through state:
      re-rendering the whole screen sixty times a second for a slide would be
-     all cost and no benefit. The pieces are spaced evenly round one loop that
-     is a piece wider than the counter, so each one slides off one edge and
-     comes back on the other without ever being seen to jump. */
+     all cost and no benefit.
+
+     The pieces ride close together, one short gap apart, like plates on a real
+     belt. They used to be spread evenly round the whole loop, which on a wide
+     screen put two pieces more than half the counter apart: one was usually
+     off the edge, and he could not see his choices side by side. The group
+     slides off one edge and comes back on the other as a whole. */
   const layBelt = useCallback(() => {
     const belt = beltRef.current;
     const slots = beltSlots.current.filter((el): el is HTMLDivElement => !!el);
     if (!belt || !slots.length) return;
     const pieceW = slots[0].offsetWidth;
-    const loop = belt.clientWidth + pieceW;
+    const step = pieceW * BELT_STEP;
+    const span = (slots.length - 1) * step + pieceW;
+    const loop = belt.clientWidth + span;
     if (loop <= 0) return;
+    // where the front of the group is: at 0 it is just off the left edge,
+    // and at `loop` the last piece has just gone off the right
+    const head = ((beltOffset.current % loop) + loop) % loop;
     slots.forEach((el, i) => {
-      const x = (((beltOffset.current + (i * loop) / slots.length) % loop) + loop) % loop;
-      el.style.transform = `translateX(${x - pieceW}px)`;
+      el.style.transform = `translateX(${head - pieceW - i * step}px)`;
     });
   }, []);
 

@@ -192,6 +192,28 @@ test.describe('sushi train', () => {
     expect(after).not.toBeCloseTo(before, 0);
   });
 
+  /* The pieces used to be spread round the whole loop, so on a wide screen
+     two of them sat more than half the counter apart and one was usually off
+     the edge. They ride as a group now, a short gap between each. */
+  for (const vp of [
+    { width: 1366, height: 1024 },
+    { width: 768, height: 1024 },
+  ]) {
+    test(`the pieces ride close together on a ${vp.width} wide screen`, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await startMeal(page, 'play sushi train');
+      const boxes = await page.locator('.sushi-btn').evaluateAll((els) =>
+        els.map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.left, w: r.width })),
+      );
+      boxes.sort((a, b) => a.x - b.x);
+      for (let i = 1; i < boxes.length; i++) {
+        const gap = boxes[i].x - (boxes[i - 1].x + boxes[i - 1].w);
+        expect(gap).toBeGreaterThan(0);
+        expect(gap).toBeLessThan(boxes[i].w * 0.6);
+      }
+    });
+  }
+
   test('the belt stops while he is holding a piece', async ({ page }) => {
     await startMeal(page, 'play sushi train');
     const width = page.viewportSize()!.width;

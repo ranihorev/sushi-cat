@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CLIP_MS, cutLog, missingClips, playLog, spokenFallbacks } from '../test/audio-stub';
+import {
+  CLIP_MS,
+  contextLock,
+  cutLog,
+  lastContext,
+  missingClips,
+  playLog,
+  spokenFallbacks,
+} from '../test/audio-stub';
 import {
   CAT_CLIPS,
   UI_CLIPS,
@@ -242,5 +250,28 @@ describe('loading', () => {
     const spy = vi.spyOn(globalThis, 'fetch');
     await Promise.all([audio.preload(['prompt/Q']), audio.preload(['prompt/Q'])]);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a context that has been put to sleep', () => {
+  it('is woken from the interrupted state as well as the suspended one', async () => {
+    audio.unlock();
+    lastContext().state = 'interrupted' as AudioContextState;
+    audio.unlock();
+    expect(lastContext().state).toBe('running');
+  });
+
+  it('does not leave a sequence waiting for ever on a clip that cannot end', async () => {
+    audio.unlock();
+    contextLock.stuck = true;
+    lastContext().state = 'interrupted' as AudioContextState;
+    let finished = false;
+    void audio.speak(['cat/nom', 'cat/meow-happy-1']).then(() => (finished = true));
+
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(finished).toBe(true);
+    contextLock.stuck = false;
+    lastContext().state = 'running';
   });
 });

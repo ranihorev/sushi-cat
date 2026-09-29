@@ -13,6 +13,9 @@ export const clipPath = (c: Clip) => `${import.meta.env.BASE_URL}audio/${c}.mp3`
 
 const PRAISE_COUNT = 6;
 
+/** how long past a clip's own length to wait for it to report that it ended */
+const PLAY_GRACE_MS = 400;
+
 /** Stops are momentary by nature; they get a longer pause instead of a longer sound. */
 const STOP_LETTERS = new Set<Letter>(['B', 'C', 'D', 'G', 'J', 'K', 'P', 'Q', 'T', 'X']);
 
@@ -39,10 +42,12 @@ class AudioEngine {
     return this.ctx;
   }
 
-  /** Must be called from a user gesture (iOS). */
+  /** Must be called from a user gesture (iOS). Safari also parks the context
+      in 'interrupted' after the screen locks or another app takes the sound,
+      and only a resume from a touch brings it back. */
   unlock() {
     const c = this.ac();
-    if (c && c.state === 'suspended') void c.resume();
+    if (c && c.state !== 'running' && c.state !== 'closed') void c.resume().catch(() => {});
   }
 
   async load(clip: Clip): Promise<AudioBuffer | null> {
@@ -102,7 +107,14 @@ class AudioEngine {
     window.speechSynthesis?.cancel();
   }
 
-  /** Plays a clip and resolves when it finishes (or immediately if missing). */
+  /** Plays a clip and resolves when it finishes (or immediately if missing).
+
+      It also resolves on the wall clock a little after the clip should have
+      ended. A suspended or interrupted context never fires `onended`, and every
+      step of a round waits on these promises: without the clock, a tablet that
+      locked its screen mid-bite came back to a cat that never swallowed and
+      pieces that could not be touched. A late clip is better than a game that
+      has stopped. */
   private playBuffer(buf: AudioBuffer, gain = 1): Promise<void> {
     const c = this.ac();
     if (!c) return Promise.resolve();
@@ -112,10 +124,22 @@ class AudioEngine {
       g.gain.value = gain;
       src.buffer = buf;
       src.connect(g).connect(this.master!);
-      src.onended = () => {
+      let guard: ReturnType<typeof setTimeout> | undefined;
+      const done = () => {
+        clearTimeout(guard);
         this.playing.delete(src);
         resolve();
       };
+      src.onended = done;
+      guard = setTimeout(() => {
+        // and it must not go off later, out of turn, once the context wakes
+        try {
+          src.stop();
+        } catch {
+          /* never started */
+        }
+        done();
+      }, buf.duration * 1000 + PLAY_GRACE_MS);
       this.playing.add(src);
       src.start();
     });

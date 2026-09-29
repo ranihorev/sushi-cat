@@ -29,6 +29,15 @@ const barColor = (solid: boolean, seen: number) => {
 
 export function Parent({ profile, onProfileChange, onClose }: Props) {
   const [name, setName] = useState(profile.name);
+  /* Typed as text and settled when the box loses focus. Clamping on every key
+     turned the "1" of "12" into 4 before the "2" could arrive. */
+  const [meals, setMeals] = useState(String(profile.settings.roundsPerMeal));
+  const commitMeals = () => {
+    const n = Math.round(Number(meals));
+    const next = Number.isFinite(n) && n > 0 ? Math.max(4, Math.min(16, n)) : 8;
+    setMeals(String(next));
+    onProfileChange((p) => ({ ...p, settings: { ...p.settings, roundsPerMeal: next } }));
+  };
 
   const toggle = (l: Letter) =>
     onProfileChange((p) => {
@@ -78,7 +87,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
             </h3>
             <button
               type="button"
-              onPointerDown={() => onProfileChange(unlockAllLetters)}
+              onClick={() => onProfileChange(unlockAllLetters)}
               className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/70"
             >
               Introduce all 26 now
@@ -96,32 +105,40 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
               const right = s.recent.filter(Boolean).length;
               const pct = Math.round(recentScore(profile, l) * 100);
               return (
-                <button
+                /* A card, not one button with another inside it: a button in a
+                   button is invalid, and the inner press reached the outer one. */
+                <div
                   key={l}
-                  type="button"
-                  onPointerDown={() => toggle(l)}
                   className={`rounded-xl border-2 p-2 text-left transition-colors ${
                     active ? 'border-white/25 bg-white/10' : 'border-transparent bg-white/[0.03] opacity-45'
                   }`}
                 >
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-2xl font-extrabold">{l}</span>
-                    <span className="text-xs text-white/45">{LETTERS[l].sound}</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: barColor(isSolid(profile, l), s.seen) }}
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggle(l)}
+                    className="block w-full text-left"
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-2xl font-extrabold">{l}</span>
+                      <span className="text-xs text-white/45">{LETTERS[l].sound}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, background: barColor(isSolid(profile, l), s.seen) }}
+                      />
+                    </div>
+                  </button>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-white/40">
                     <span title={`${s.correct} of ${s.seen} all time`}>
                       {right}/{s.recent.length} recent
                     </span>
                     <button
                       type="button"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
+                      aria-label={`hear ${l}`}
+                      onClick={() => {
+                        audio.unlock();
                         void audio.speak([`prompt/${l}`, 400, `confirm/${l}`]);
                       }}
                       className="rounded px-1 hover:text-white"
@@ -129,7 +146,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                       ▶︎
                     </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -151,7 +168,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
               />
               <button
                 type="button"
-                onPointerDown={() => onProfileChange((p) => withNameLetters(p, name))}
+                onClick={() => onProfileChange((p) => withNameLetters(p, name))}
                 className="rounded-lg bg-white/15 px-4 py-2 font-bold"
               >
                 Add
@@ -185,18 +202,15 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
               <span className="text-sm font-bold">Pieces per meal</span>
               <input
                 type="number"
+                inputMode="numeric"
                 min={4}
                 max={16}
-                value={profile.settings.roundsPerMeal}
-                onChange={(e) =>
-                  onProfileChange((p) => ({
-                    ...p,
-                    settings: {
-                      ...p.settings,
-                      roundsPerMeal: Math.max(4, Math.min(16, Number(e.target.value) || 8)),
-                    },
-                  }))
-                }
+                value={meals}
+                onChange={(e) => setMeals(e.target.value)}
+                onBlur={commitMeals}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                }}
                 className="w-20 rounded-lg bg-white/10 px-3 py-2 text-center font-bold outline-none"
               />
             </label>
@@ -220,7 +234,9 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
                   </span>
                 )),
             )}
-            {Object.keys(profile.confusions).length === 0 && (
+            {!Object.values(profile.confusions).some((row) =>
+              Object.values(row ?? {}).some((n) => (n ?? 0) >= 2),
+            ) && (
               <span className="text-sm text-white/35">Nothing yet.</span>
             )}
           </div>
@@ -229,7 +245,7 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
         <section className="flex flex-wrap gap-3 border-t border-white/10 pt-5">
           <button
             type="button"
-            onPointerDown={() =>
+            onClick={() =>
               void audio.preload([
                 ...ALL_LETTERS.flatMap(clipsForLetter),
                 ...UI_CLIPS,
@@ -242,9 +258,11 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
           </button>
           <button
             type="button"
-            onPointerDown={() => {
+            onClick={() => {
               if (confirm('Erase all progress and start over?')) {
                 onProfileChange(() => blankProfile());
+                setName('');
+                setMeals('8');
               }
             }}
             className="rounded-lg bg-red-500/15 px-4 py-2 text-sm font-bold text-red-300"
