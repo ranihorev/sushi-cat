@@ -564,6 +564,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
       return;
     }
     if (!locked) setMood('idle');
+    /* The grab stopped the idle clock; put it back, or a piece carried off and
+       set down somewhere else leaves him in silence for the rest of the round. */
+    setHeard((n) => n + 1);
     if (!g.moved) {
       /* He tapped instead of dragging. Rather than nothing happening, the piece
          hops to show it wants to be carried, and the sound plays again. */
