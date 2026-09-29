@@ -54,7 +54,7 @@ export const clearClips = (page: Page) => page.evaluate(() => ((window as any)._
 export async function startMeal(page: Page, button = 'play') {
   await page.goto('/');
   await page.getByLabel(button, { exact: true }).click();
-  await page.locator('.sushi-btn, .cafe-cat').first().waitFor({ state: 'visible' });
+  await page.locator('.sushi-btn, .cafe-pop').first().waitFor({ state: 'visible' });
   // the cat's hello, the beat after it, then the prompt itself
   await page.waitForTimeout(3600);
 }

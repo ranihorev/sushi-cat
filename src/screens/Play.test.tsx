@@ -657,18 +657,10 @@ describe('under StrictMode', () => {
 });
 
 describe('the way out', () => {
-  it('needs a long press in the corner, so he cannot leave by accident', async () => {
+  it('goes home when the home button is pressed', async () => {
     await start();
-    const exit = screen.getByLabelText('exit');
-
-    fireEvent.pointerDown(exit);
-    await tick(300);
-    fireEvent.pointerUp(exit);
-    await tick(2000);
     expect(exited).toBe(false);
-
-    fireEvent.pointerDown(exit);
-    await tick(1200);
+    fireEvent.pointerDown(screen.getByLabelText('home'));
     expect(exited).toBe(true);
   });
 });

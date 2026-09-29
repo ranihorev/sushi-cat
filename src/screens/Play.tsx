@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Cat, REACTIONS, type Mood, type Reaction } from '../components/Cat';
 import { Confetti } from '../components/Confetti';
+import { HomeButton } from '../components/HomeButton';
 import { Plate } from '../components/Plate';
 import { Counter, DECORATIONS, Restaurant } from '../components/Restaurant';
 import { Sushi, type PieceState } from '../components/Sushi';
@@ -682,21 +683,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
-      {/* parent escape hatch — long-press the corner, invisible to him */}
-      <button
-        type="button"
-        aria-label="exit"
-        onPointerDown={(e) => {
-          const t = window.setTimeout(onExit, 900);
-          const cancel = () => {
-            clearTimeout(t);
-            e.currentTarget?.removeEventListener('pointerup', cancel);
-          };
-          e.currentTarget.addEventListener('pointerup', cancel, { once: true });
-          e.currentTarget.addEventListener('pointerleave', cancel, { once: true });
-        }}
-        className="absolute top-0 left-0 z-30 h-16 w-16 opacity-0"
-      />
+      <HomeButton onHome={onExit} />
 
       {/* the restaurant, with the cat waiting behind the counter */}
       <div className="relative min-h-0 flex-1">
