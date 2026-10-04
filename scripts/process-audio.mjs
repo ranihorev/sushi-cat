@@ -20,8 +20,10 @@
  *   2. Loudness is matched on the part of the clip that is sound, then a clean
  *      lookahead limiter holds the peaks under -1 dBFS. The old soft-clip
  *      (tanh at up to 14x gain) distorted every short sound.
- *   3. Slowing down uses rubberband when ffmpeg has it (atempo otherwise), and
- *      a clip is slowed at most once.
+ *   3. Words and sentences are not slowed. The voice (eleven_v4) already
+ *      speaks at a calm pace, and stretching made it sound wobbly. Only short
+ *      letter sounds are drawn out, with rubberband when ffmpeg has it
+ *      (atempo otherwise), and at most once.
  *   4. Output is 44.1kHz mono mp3 at VBR quality 3. /s/ and /f/ live above
  *      5kHz; the old 22kHz output cut the top off them.
  *
@@ -62,8 +64,6 @@ const VOWELS = new Set(['A', 'E', 'I', 'O', 'U']);
 /** glides can't be held; a short "wuh" is the best there is */
 const GLIDES = new Set(['W', 'Y']);
 
-/** Spoken parts are slowed to this — TTS pace is briskly adult. */
-const SPEECH_TEMPO = 0.82;
 /** Vowels and held sounds are steady, so they stretch cleanly. */
 const PHONEME_TEMPO = 0.85;
 /** A held sound shorter than this is drawn out to reach it. */
@@ -408,8 +408,7 @@ for (const L of LETTERS) {
   console.log(`  ${L}  sound ${secs(sound)}s${letter ? `, name ${secs(letter)}s` : ''}`);
 }
 
-/* Real words and sentences: trim, slow once, level. The letter-name clips are
-   already slowed in their source, so they are not slowed again. */
+/* Real words and sentences: trim and level, nothing else. */
 const speech = ONLY.length ? ['word', 'name'] : ['word', 'name', 'praise', 'ui', 'cat'];
 for (const dir of speech) {
   const files = (await readdir(join(SRC, dir)).catch(() => []))
@@ -422,9 +421,7 @@ for (const dir of speech) {
       problems.push(`${dir}/${f}: silent`);
       continue;
     }
-    // the cat's own noises are already the right pace; only speech gets slowed
-    const paced = dir === 'cat' ? t : await stretch(t, SPEECH_TEMPO);
-    await write(`${dir}/${f.replace('.mp3', '')}`, level(fade(paced, 0.005, 0.04)));
+    await write(`${dir}/${f.replace('.mp3', '')}`, level(fade(t, 0.005, 0.04)));
   }
   if (files.length) console.log(`  ${dir}/  ${files.length} clips`);
 }

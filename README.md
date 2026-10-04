@@ -69,10 +69,11 @@ over the tablet. Every prompt should be the sound and nothing else:
 - `/t/`, not "tuh" — a trailing schwa causes blending problems later
   ("cuh-a-tuh" instead of "cat")
 
-If one is wrong, fix its `arpa` field in `scripts/generate-audio.mjs` and
-regenerate just that letter. Pronunciation is forced with CMU arpabet phoneme
-tags, which is why the prompts use `eleven_flash_v2` — it is the model that
-supports them.
+If one is wrong, fix its `sound` field in `scripts/generate-audio.mjs` and
+regenerate just that letter. The voice is Emma on `eleven_v4`, which reads IPA
+between slashes, so a sound is written as itself (`/mːːː/` for a held "mmm").
+Stops (B C D G J K P Q T) have no prompt take: `npm run audio:process` cuts
+them from the start of the clue word.
 
 A parent's own voice beats any TTS for engagement. To swap in recordings, drop
 files at the same paths (`public/audio/prompt/M.mp3` etc.) and skip the script.

@@ -4,18 +4,22 @@
  * untouched recordings; `npm run audio:process` builds the clips the game
  * plays from them.
  *
- * The hard part of phonics TTS is that plain text makes the model say letter
- * *names* — "tee" instead of /t/. We sidestep that with CMU arpabet phoneme
- * tags, which force an exact pronunciation. Those are supported by
- * eleven_flash_v2, so that is the model used for the bare-phoneme prompts.
- * Full sentences (words, praise) use a nicer-sounding model.
+ * The voice is "Emma - Bright Kids Educator" on eleven_v4. That model reads
+ * IPA between slashes, so a letter sound is written as the sound itself
+ * (/mːːː/ for a held "mmm") and a letter name that plain text gets wrong
+ * (A, I, O) is written as /eɪ/, /aɪ/, /oʊ/. Words in [brackets] are v4 audio
+ * tags that set the mood of the line.
+ *
+ * The clips in audio-src/ were made through the ElevenLabs connector as a few
+ * long takes, one per group, with a long pause between items, and cut at the
+ * pauses. This script makes the same lines one clip at a time.
  *
  *   ELEVENLABS_API_KEY=... npm run audio             # everything that's missing
  *   ELEVENLABS_API_KEY=... npm run audio -- --force  # regenerate
  *   ELEVENLABS_API_KEY=... npm run audio -- S M T    # just these letters
  *
  * Optional env:
- *   ELEVENLABS_VOICE_ID   default is a warm, friendly female voice
+ *   ELEVENLABS_VOICE_ID   default is Emma
  */
 
 import { mkdir, writeFile, access } from 'node:fs/promises';
@@ -32,64 +36,46 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-/** Rachel — clear, warm, well-behaved with phoneme tags. */
-const VOICE = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+/** Emma — bright, warm, made for kids' phonics. */
+const VOICE = process.env.ELEVENLABS_VOICE_ID || 'oClOrzqamOXmtcB8iqTj';
+const MODEL = 'eleven_v4';
 
-/** phoneme tags are a v2-model feature; sentences sound better on multilingual */
-const PHONEME_MODEL = 'eleven_flash_v2';
-const SENTENCE_MODEL = 'eleven_multilingual_v2';
-
+/* The sound is the prompt for letters you can hold or say alone. Stops
+   (B C D G J K P Q T) have none: process-audio.mjs cuts them from the start
+   of the word, because a stop said alone always comes out as "tuh". */
 const LETTERS = {
-  A: { arpa: 'AE1',   word: 'apple',    sound: 'ah' },
-  B: { arpa: 'B AH0',   word: 'ball',     sound: 'buh' },
-  C: { arpa: 'K AH0',   word: 'cat',      sound: 'kuh' },
-  D: { arpa: 'D AH0',   word: 'dog',      sound: 'duh' },
-  E: { arpa: 'EH1',   word: 'egg',      sound: 'eh' },
-  F: { arpa: 'F F F', word: 'fish',     sound: 'fff' },
-  G: { arpa: 'G AH0',   word: 'goat',     sound: 'guh' },
-  H: { arpa: 'HH HH', word: 'hat',      sound: 'huh' },
-  I: { arpa: 'IH1',   word: 'igloo',    sound: 'ih' },
-  J: { arpa: 'JH AH0',  word: 'jam',      sound: 'juh' },
-  K: { arpa: 'K AH0',   word: 'kite',     sound: 'kuh' },
-  L: { arpa: 'L L',   word: 'lion',     sound: 'lll' },
-  M: { arpa: 'M M M', word: 'moon',     sound: 'mmm' },
-  N: { arpa: 'N N N', word: 'nose',     sound: 'nnn' },
-  O: { arpa: 'AA1',   word: 'octopus',  sound: 'oh' },
-  P: { arpa: 'P AH0',   word: 'pizza',    sound: 'puh' },
-  Q: { arpa: 'K W AH0', word: 'queen',    sound: 'kwuh' },
-  R: { arpa: 'R R',   word: 'rocket',   sound: 'rrr' },
-  S: { arpa: 'S S S', word: 'sun',      sound: 'sss' },
-  T: { arpa: 'T AH0',   word: 'tiger',    sound: 'tuh' },
-  U: { arpa: 'AH1',   word: 'umbrella', sound: 'uh' },
-  V: { arpa: 'V V V', word: 'van',      sound: 'vvv' },
-  W: { arpa: 'W AH0', word: 'water',    sound: 'wuh' },
-  X: { arpa: 'K S S', word: 'box',      sound: 'ks' },
-  Y: { arpa: 'Y AH0', word: 'yo-yo',    sound: 'yuh' },
-  Z: { arpa: 'Z Z Z', word: 'zebra',    sound: 'zzz' },
+  A: { sound: '/æː/', word: 'apple' },
+  B: { word: 'ball' },
+  C: { word: 'cat' },
+  D: { word: 'dog' },
+  E: { sound: '/ɛː/', word: 'egg' },
+  F: { sound: '/fːːː/', word: 'fish' },
+  G: { word: 'goat' },
+  H: { sound: '/hə/', word: 'hat' },
+  I: { sound: '/ɪː/', word: 'igloo' },
+  J: { word: 'jam' },
+  K: { word: 'kite' },
+  L: { sound: '/lːːː/', word: 'lion' },
+  M: { sound: '/mːːː/', word: 'moon' },
+  N: { sound: '/nːːː/', word: 'nose' },
+  O: { sound: '/ɑː/', word: 'octopus' },
+  P: { word: 'pizza' },
+  Q: { word: 'queen' },
+  R: { sound: '/ɹːːː/', word: 'rocket' },
+  S: { sound: '/sːːː/', word: 'sun' },
+  T: { word: 'tiger' },
+  U: { sound: '/ʌː/', word: 'umbrella' },
+  V: { sound: '/vːːː/', word: 'van' },
+  W: { sound: '/wə/', word: 'water' },
+  X: { sound: '/ks/', word: 'box' },
+  Y: { sound: '/jə/', word: 'yo-yo' },
+  Z: { sound: '/zːːː/', word: 'zebra' },
 };
 
-const ph = (arpa, fallback) =>
-  `<phoneme alphabet="cmu-arpabet" ph="${arpa}">${fallback}</phoneme>`;
-
-/* Letter names, forced with arpabet. Plain text is unreliable here: "A" comes
-   out as the article, "I" as the pronoun, "O" as an exclamation. */
-const LETTER_NAMES = {
-  A: 'EY1', B: 'B IY1', C: 'S IY1', D: 'D IY1', E: 'IY1', F: 'EH1 F',
-  G: 'JH IY1', H: 'EY1 CH', I: 'AY1', J: 'JH EY1', K: 'K EY1', L: 'EH1 L',
-  M: 'EH1 M', N: 'EH1 N', O: 'OW1', P: 'P IY1', Q: 'K Y UW1', R: 'AA1 R',
-  S: 'EH1 S', T: 'T IY1', U: 'Y UW1', V: 'V IY1',
-  W: 'D AH1 B AH0 L Y UW0', X: 'EH1 K S', Y: 'W AY1', Z: 'Z IY1',
-};
-
-/* Spelled-out fallback inside each phoneme tag. If the tag is ever dropped the
-   model still reads a letter name rather than the bare character, which is how
-   H came out as "ay" with the ch missing. */
-const LETTER_SPELLED = {
-  A: 'ay', B: 'bee', C: 'see', D: 'dee', E: 'ee', F: 'eff', G: 'jee',
-  H: 'aitch', I: 'eye', J: 'jay', K: 'kay', L: 'ell', M: 'em', N: 'en',
-  O: 'oh', P: 'pee', Q: 'cue', R: 'ar', S: 'ess', T: 'tee', U: 'you',
-  V: 'vee', W: 'double-you', X: 'ex', Y: 'why', Z: 'zee',
-};
+/* Letter names. Plain text is fine for most; "A" comes out as the article,
+   "I" as the pronoun and "O" as an exclamation, so those three are IPA. */
+const LETTER_NAME = { A: '/eɪ/', I: '/aɪ/', O: '/oʊ/' };
+const letterName = (L) => LETTER_NAME[L] ?? L;
 
 const PRAISE = [
   'Yum!',
@@ -101,10 +87,10 @@ const PRAISE = [
 ];
 
 const UI = {
-  'ui/lets-eat': "Let's eat!",
-  'ui/all-done': 'All done. Nap time!',
-  'ui/try-again': 'Hmm... try again!',
-  'ui/this-one': 'This one!',
+  'ui/lets-eat': "[excited] Let's eat!",
+  'ui/all-done': '[warmly] All done, nap time!',
+  'ui/try-again': 'Hmm, try again!',
+  'ui/this-one': '[happy] This one!',
 };
 
 /* ------------------------------------------------------------------ */
@@ -116,7 +102,7 @@ const only = args.filter((a) => /^[A-Z]$/.test(a));
 const exists = (p) => access(p).then(() => true, () => false);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function tts(text, { model, stability = 0.55, style = 0.15, speed = 1 }) {
+async function tts(text, { stability = 0.5, style = 0.3 } = {}) {
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${VOICE}?output_format=mp3_44100_128`,
     {
@@ -124,14 +110,12 @@ async function tts(text, { model, stability = 0.55, style = 0.15, speed = 1 }) {
       headers: { 'xi-api-key': API_KEY, 'content-type': 'application/json' },
       body: JSON.stringify({
         text,
-        model_id: model,
-        apply_text_normalization: 'off',
+        model_id: MODEL,
         voice_settings: {
           stability,
           similarity_boost: 0.8,
           style,
           use_speaker_boost: true,
-          speed,
         },
       }),
     },
@@ -165,51 +149,34 @@ function jobs() {
   const letters = only.length ? only : Object.keys(LETTERS);
 
   for (const L of letters) {
-    const { arpa, word, sound } = LETTERS[L];
-    const tag = ph(arpa, sound);
+    const { sound, word } = LETTERS[L];
 
-    // the prompt: the bare phoneme, said twice. Stops are cut from the word
-    // instead (see process-audio.mjs), so for those this take goes unused.
-    list.push({
-      path: `prompt/${L}`,
-      text: `${tag} ... ${tag}`,
-      opts: { model: PHONEME_MODEL, stability: 0.85, style: 0, speed: 0.85 },
-    });
+    // the prompt: the bare sound, for letters that have one
+    if (sound) list.push({ path: `prompt/${L}`, text: `[slowly] ${sound}`, opts: { stability: 0.8, style: 0 } });
 
     // no confirm/ clip: process-audio.mjs builds it from the prompt and the letter
 
-    // the word, for word-initial rounds
-    list.push({
-      path: `word/${L}`,
-      text: `${word}!`,
-      opts: { model: SENTENCE_MODEL, stability: 0.5, style: 0.3 },
-    });
+    // the word, for word-initial rounds (and the source of a stop's sound)
+    const Word = word[0].toUpperCase() + word.slice(1);
+    list.push({ path: `word/${L}`, text: `[warmly] ${Word}!` });
 
     // the letter's name on its own, used to open a sound prompt
-    list.push({
-      path: `letter/${L}`,
-      text: ph(LETTER_NAMES[L], LETTER_SPELLED[L]),
-      opts: { model: PHONEME_MODEL, stability: 0.8, style: 0.1, speed: 0.85 },
-    });
+    list.push({ path: `letter/${L}`, text: `[warmly] ${letterName(L)}.`, opts: { stability: 0.7 } });
 
     // letter-name rounds
-    list.push({
-      path: `name/${L}`,
-      text: `Where's ${L}?`,
-      opts: { model: SENTENCE_MODEL, stability: 0.5, style: 0.35 },
-    });
+    list.push({ path: `name/${L}`, text: `[curious] Where's ${letterName(L)}?` });
   }
 
   if (!only.length) {
     PRAISE.forEach((text, i) =>
       list.push({
         path: `praise/${i + 1}`,
-        text,
-        opts: { model: SENTENCE_MODEL, stability: 0.45, style: 0.45 },
+        text: `[happy] ${text}`,
+        opts: { stability: 0.45, style: 0.45 },
       }),
     );
     for (const [path, text] of Object.entries(UI)) {
-      list.push({ path, text, opts: { model: SENTENCE_MODEL, stability: 0.5, style: 0.35 } });
+      list.push({ path, text });
     }
   }
   return list;
