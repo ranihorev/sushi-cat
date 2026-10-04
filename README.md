@@ -42,9 +42,10 @@ processor fixes them:
 - **Loudness.** The raw clips varied about 10x. Everything is levelled to the
   same loudness on its sounding part, with a clean lookahead limiter, so a short
   `/k/` sits level with a held `/mmm/` without being distorted.
-- **Pace.** Speech is slowed once (rubberband if ffmpeg has it, else atempo),
-  held sounds and vowels are drawn out, and the confirmation is built from the
-  finished sound and letter name.
+- **Pace.** Words and sentences are not slowed; the voice is already calm.
+  Only short held sounds and vowels are drawn out, once (rubberband if ffmpeg
+  has it, else atempo), and the confirmation is built from the finished sound
+  and letter name.
 
 Output is 44.1kHz mp3, so `/s/` and `/f/` keep their top end.
 
