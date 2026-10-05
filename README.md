@@ -42,9 +42,10 @@ processor fixes them:
 - **Loudness.** The raw clips varied about 10x. Everything is levelled to the
   same loudness on its sounding part, with a clean lookahead limiter, so a short
   `/k/` sits level with a held `/mmm/` without being distorted.
-- **Pace.** Speech is slowed once (rubberband if ffmpeg has it, else atempo),
-  held sounds and vowels are drawn out, and the confirmation is built from the
-  finished sound and letter name.
+- **Pace.** Words and sentences are not slowed; the voice is already calm.
+  Only short held sounds and vowels are drawn out, once (rubberband if ffmpeg
+  has it, else atempo), and the confirmation is built from the finished sound
+  and letter name.
 
 Output is 44.1kHz mp3, so `/s/` and `/f/` keep their top end.
 
@@ -69,10 +70,11 @@ over the tablet. Every prompt should be the sound and nothing else:
 - `/t/`, not "tuh" — a trailing schwa causes blending problems later
   ("cuh-a-tuh" instead of "cat")
 
-If one is wrong, fix its `arpa` field in `scripts/generate-audio.mjs` and
-regenerate just that letter. Pronunciation is forced with CMU arpabet phoneme
-tags, which is why the prompts use `eleven_flash_v2` — it is the model that
-supports them.
+If one is wrong, fix its `sound` field in `scripts/generate-audio.mjs` and
+regenerate just that letter. The voice is Emma on `eleven_v4`, which reads IPA
+between slashes, so a sound is written as itself (`/mːːː/` for a held "mmm").
+Stops (B C D G J K P Q T) have no prompt take: `npm run audio:process` cuts
+them from the start of the clue word.
 
 A parent's own voice beats any TTS for engagement. To swap in recordings, drop
 files at the same paths (`public/audio/prompt/M.mp3` etc.) and skip the script.
