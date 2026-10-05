@@ -216,6 +216,22 @@ describe('the say-it-again button', () => {
     expect(playLog).toHaveLength(heard);
   });
 
+  /* Pressed while the cat was still eating, it asked the question he had just
+     answered, so the old letter came back after he got it right. */
+  it('does not ask the old question again once it has been answered', async () => {
+    await start();
+    const target = targetOnScreen();
+    dragTo(target, ON_CAT);
+    await tick(600);
+    playLog.length = 0;
+
+    fireEvent.pointerDown(screen.getByLabelText('say it again'));
+    await tick(400);
+
+    expect(playLog).not.toContain(`prompt/${target}`);
+    expect(playLog).not.toContain(`letter/${target}`);
+  });
+
   it('is not an answer', async () => {
     await start();
     fireEvent.pointerDown(screen.getByLabelText('say it again'));
@@ -537,6 +553,31 @@ describe('the piece in his hand', () => {
     await tick(4000);
     expect(playLog).not.toContain(`prompt/${target}`);
     expect(piece(target).className).not.toContain('sushi-alive');
+  });
+
+  /* Two fingers on two pieces. The second hold used to start a second voice
+     loop while the first was still running, and only one of them was ever
+     stopped: the other piece went on saying its sound every second and a half
+     for good, through the next round and out of the game. */
+  it('stops every piece talking, even when two were held at once', async () => {
+    await start();
+    const target = targetOnScreen();
+    const other = distractorOnScreen();
+
+    fireEvent.pointerDown(piece(other), { pointerId: 1, clientX: 0, clientY: -140 });
+    await tick(500);
+    fireEvent.pointerDown(piece(target), { pointerId: 2, clientX: 0, clientY: -140 });
+    await tick(500);
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 900, clientY: 900 });
+    fireEvent.pointerMove(window, { pointerId: 2, clientX: 0, clientY: -40 });
+    fireEvent.pointerMove(window, { pointerId: 2, clientX: 0, clientY: 0 });
+    fireEvent.pointerUp(window, { pointerId: 2, clientX: 0, clientY: 0 });
+    await settleRound();
+    playLog.length = 0;
+
+    await tick(4000);
+    expect(playLog).not.toContain(`prompt/${other}`);
+    expect(playLog.filter((c) => c === `prompt/${target}`).length).toBeLessThanOrEqual(1);
   });
 
   /* A four-year-old's hand rests on the counter constantly. If a brush woke a

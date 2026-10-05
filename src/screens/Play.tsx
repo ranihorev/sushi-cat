@@ -177,6 +177,8 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
   eatenRef.current = eaten;
 
   const alive = useRef(true);
+  /** true from a right answer until the next round opens: the question is answered */
+  const answered = useRef(false);
 
   /* Feeding is a drag, not a tap. Carrying the piece to the cat is a more
      deliberate act than tapping — it makes him commit to a choice rather than
@@ -233,10 +235,19 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
      `oneShot` rather than `speak`, so it layers over the question instead of
      cancelling it — the whole value is in hearing the two together. It is a
      little quieter than the prompt so it reads as the piece talking rather than
-     as the game asking again. */
+     as the game asking again.
+
+     Only one piece talks at a time. Starting a voice clears the one before it:
+     with two fingers on two pieces there used to be two loops and one timer to
+     hold them, so letting go stopped one and the other piece went on saying
+     its sound for good — through the next round and out of the game. */
   const speakPiece = useCallback((l: Letter) => {
-    void audio.oneShot(`prompt/${l}`, 0.9);
-    voiceTimer.current = window.setTimeout(() => speakPiece(l), PIECE_VOICE_MS);
+    clearTimeout(voiceTimer.current);
+    const say = () => {
+      void audio.oneShot(`prompt/${l}`, 0.9);
+      voiceTimer.current = window.setTimeout(say, PIECE_VOICE_MS);
+    };
+    say();
   }, []);
 
   /** he has let go, or the round has taken the piece off him */
@@ -258,6 +269,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
      talking-over-itself that makes the whole thing hard to follow. */
   const replayPrompt = useCallback(
     (r: Round) => {
+      /* Not while the cat is eating: the question on screen has been answered,
+         and asking it again would say the old letter after he got it right. */
+      if (answered.current) return;
       speakPrompt(r);
       setHeard((n) => n + 1);
     },
@@ -267,6 +281,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
   /* -------- start of a round: play the prompt, then open up the choices -------- */
   const beginRound = useCallback(
     (r: Round, intro: Array<string | number> = []) => {
+      answered.current = false;
       setRound(r);
       setPieceState({});
       setMisses(0);
@@ -343,6 +358,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
     el?.style.setProperty('--drop-y', `${drop.dy}px`);
 
     if (letter === round.target) {
+      answered.current = true;
       setLocked(true);
       audio.tap();
       audio.whoosh();
@@ -526,6 +542,8 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
     audio.unlock();
     audio.tap();
     clearTimeout(idleTimer.current);
+    // a second finger takes over from the first, which goes quiet
+    sleepPiece();
     grabRef.current = { letter, x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
     setDrag({ letter, dx: 0, dy: 0, over: false });
 
