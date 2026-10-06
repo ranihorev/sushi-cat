@@ -112,6 +112,8 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
   const popTimer = useRef<number | undefined>(undefined);
   const idleTimer = useRef<number | undefined>(undefined);
   const alive = useRef(true);
+  /** true from a right catch until the next round opens: the question is answered */
+  const answered = useRef(false);
 
   const after = useCallback((ms: number, fn: () => void) => {
     timers.current.push(window.setTimeout(fn, ms));
@@ -259,6 +261,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
   const beginRound = useCallback(
     (r: Round, intro: Array<string | number> = []) => {
       roundRef.current = r;
+      answered.current = false;
       setRound(r);
       const holes = Math.max(3, r.options.length);
       cupsRef.current = Array(holes).fill(null);
@@ -286,6 +289,9 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
   }, []);
 
   const sayAgain = useCallback(() => {
+    /* Not while the caught cat is being celebrated: that question has been
+       answered, and asking it again would say the old letter. */
+    if (answered.current) return;
     void audio.speak(promptClips(roundRef.current), fallbackPrompt(roundRef.current));
     setHeard((n) => n + 1);
   }, []);
@@ -311,6 +317,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
     const r = roundRef.current;
 
     if (pop.letter === r.target) {
+      answered.current = true;
       patchPop(pop.id, { state: 'caught' });
       sinkAll(pop.id);
       void audio.oneShot('cat/purr', 0.9);
