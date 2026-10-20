@@ -463,6 +463,9 @@ function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
         ))}
       </svg>
 
+      <Bunting />
+      <Bubbles />
+
       {/* The lights coming up on a run of right answers. It is the only reward
           in the game that arrives without stopping the game to hand it over. */}
       <div
@@ -497,6 +500,74 @@ function RestaurantScene({ unlocked, spotlight, dim, fever }: Props) {
 
 export const Restaurant = memo(RestaurantScene);
 
+const FLAG_COLORS = ['#FF6FA3', '#F7C744', '#6FCBF5', '#4FD1A5', '#A98BF5', '#FF8A65'];
+
+/** A string of little party flags just under the curtain. It is always up —
+    this is a happy place from the very first visit. */
+export const Bunting = memo(function Bunting({ top = 'clamp(44px,7.5vh,78px)' }: { top?: string }) {
+  const n = 16;
+  return (
+    <svg
+      viewBox="0 0 800 60"
+      preserveAspectRatio="none"
+      className="bunting pointer-events-none absolute inset-x-0 h-[clamp(26px,5vh,48px)] w-full"
+      style={{ top }}
+      aria-hidden
+    >
+      <path d="M -10 6 Q 400 40 810 6" stroke="#FFFBF2" strokeWidth="3" fill="none" opacity="0.9" />
+      {Array.from({ length: n }, (_, i) => {
+        const x = 25 + i * 50;
+        // the flags hang from the same sagging string
+        const t = x / 800;
+        const y = 6 + 68 * t * (1 - t);
+        return (
+          <path
+            key={i}
+            d={`M ${x - 17} ${y} L ${x + 17} ${y} L ${x} ${y + 34} Z`}
+            fill={FLAG_COLORS[i % FLAG_COLORS.length]}
+            stroke="#FFFBF2"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        );
+      })}
+    </svg>
+  );
+});
+
+const BUBBLES = [
+  { left: '6%', size: 18, dur: 14, delay: 0 },
+  { left: '17%', size: 10, dur: 11, delay: 5 },
+  { left: '29%', size: 14, dur: 16, delay: 9 },
+  { left: '71%', size: 12, dur: 13, delay: 2 },
+  { left: '83%', size: 20, dur: 17, delay: 7 },
+  { left: '93%', size: 9, dur: 10, delay: 11 },
+];
+
+/** A few soap bubbles drifting up the wall. Slow, and away from the middle,
+    so they never pull the eye off the cat or the letters. */
+export const Bubbles = memo(function Bubbles() {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {BUBBLES.map((b, i) => (
+        <span
+          key={i}
+          className="bubble-float absolute bottom-0 rounded-full"
+          style={{
+            left: b.left,
+            width: b.size,
+            height: b.size,
+            animationDuration: `${b.dur}s`,
+            animationDelay: `${-b.delay}s`,
+            background: 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.9) 0 18%, rgba(255,255,255,0.25) 22%, rgba(255,255,255,0.08) 70%)',
+            border: '1.5px solid rgba(255,255,255,0.6)',
+          }}
+        />
+      ))}
+    </div>
+  );
+});
+
 /** The wooden counter the sushi actually sit on. */
 export const Counter = memo(function Counter() {
   return (
@@ -514,6 +585,14 @@ export const Counter = memo(function Counter() {
         }}
       />
       <div className="absolute inset-x-0 top-2 h-6 bg-gradient-to-b from-black/25 to-transparent" />
+      {/* a pink and white candy stripe along the front of the counter */}
+      <div
+        className="absolute inset-x-0 bottom-0 h-[26%] border-t-4 border-white/70"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(-45deg,#FF8FB5 0 16px,#FFE3EE 16px 32px)',
+        }}
+      />
     </div>
   );
 });
