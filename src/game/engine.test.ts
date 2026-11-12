@@ -148,8 +148,9 @@ describe('choosing the target', () => {
     const p = withActive([...STARTER_SET]);
     const recent: Letter[] = ['S', 'S', 'M'];
     let hits = 0;
-    for (let i = 0; i < 600; i++) if (nextRound(p, 1, recent).target === 'S') hits++;
-    expect(hits).toBeLessThan(60);
+    // expected about 230 of 3000; an even share of the five letters would be 600
+    for (let i = 0; i < 3000; i++) if (nextRound(p, 1, recent).target === 'S') hits++;
+    expect(hits).toBeLessThan(300);
   });
 });
 

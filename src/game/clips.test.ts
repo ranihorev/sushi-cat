@@ -1,9 +1,10 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CAT_CLIPS, UI_CLIPS, clipPath, clipsForLetter, promptClips } from './audio';
+import { CAT_CLIPS, OPTIONAL_CLIPS, UI_CLIPS, clipPath, clipsForLetter, promptClips } from './audio';
 import { ALL_LETTERS } from './letters';
 import type { Round } from './types';
+import { ROLL_WORDS } from './words';
 
 /* The game is offline-first: a clip that was never generated is a round the
    child hears nothing for. Cheap to check, and impossible to notice by eye
@@ -13,7 +14,7 @@ const AUDIO_DIR = join(process.cwd(), 'public', 'audio');
 const fileFor = (clip: string) => join(AUDIO_DIR, `${clip}.mp3`);
 
 const everyClip = () => {
-  const clips = new Set<string>([...UI_CLIPS, ...CAT_CLIPS]);
+  const clips = new Set<string>([...UI_CLIPS, ...CAT_CLIPS, ...OPTIONAL_CLIPS, ...ROLL_WORDS.map((w) => w.clip)]);
   for (const l of ALL_LETTERS) {
     for (const c of clipsForLetter(l)) clips.add(c);
     for (const kind of ['sound', 'word', 'name'] as const) {
