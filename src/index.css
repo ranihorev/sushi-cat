@@ -482,6 +482,132 @@ body {
 }
 .big-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28) }
 
+
+/* ------------------------------ roll shop ------------------------------ */
+
+/* the bamboo mat the roll is built on */
+.roll-mat {
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 13px),
+    linear-gradient(180deg, #a9cf7a, #86b35a);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25), inset 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+.roll-tile {
+  --topping: #ff8a65;
+  display: grid;
+  place-items: center;
+  width: clamp(50px, 11.5vmin, 104px);
+  height: clamp(50px, 11.5vmin, 104px);
+  border: 0;
+  border-radius: 22%;
+  padding: 0;
+  font-family: var(--font-round);
+  font-weight: 800;
+  font-size: clamp(28px, 7vmin, 62px);
+  line-height: 1;
+  color: var(--color-nori);
+  /* a slice of roll seen from the end: nori round the outside, rice inside,
+     and a stripe of the filling's colour so each letter keeps its own colour */
+  background: linear-gradient(180deg, var(--topping) 0 16%, #fffbf2 16% 100%);
+  box-shadow: inset 0 0 0 clamp(3px, 0.9vmin, 7px) var(--color-nori);
+  transition: border-radius 300ms ease, transform 200ms ease;
+}
+.roll-tile-empty {
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7);
+}
+/* the place that is asking for its piece */
+.roll-tile-ask {
+  background: rgba(247, 199, 68, 0.4);
+  box-shadow: inset 0 0 0 4px #f7c744;
+  animation: slotAsk 1.1s ease-in-out infinite;
+}
+/* the piece whose sound is being said, as the word is sounded out */
+.roll-tile-lit { transform: translateY(-14%) scale(1.12) }
+.roll-tile-joined { border-radius: 8% }
+.roll-cheer { animation: bounce 0.62s cubic-bezier(0.34, 1.56, 0.64, 1) 2 }
+@keyframes slotAsk {
+  0%, 100% { box-shadow: inset 0 0 0 4px #f7c744, 0 0 0 0 rgba(247, 199, 68, 0); transform: scale(1) }
+  50% { box-shadow: inset 0 0 0 4px #f7c744, 0 0 22px 6px rgba(247, 199, 68, 0.75); transform: scale(1.06) }
+}
+
+/* ------------------------------ the street ------------------------------ */
+
+.door {
+  position: relative;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  width: min(21vw, 27vh, 196px);
+  aspect-ratio: 4 / 5;
+  transition: transform 140ms ease;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  touch-action: manipulation;
+}
+.door:active { transform: translateY(5px) scale(0.97) }
+.door-sign { animation: bob 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
+.door-locked .door-sign { animation: none }
+.door-locked .door-front { filter: saturate(0.25) brightness(0.8) }
+.door-shake { animation: headShake 0.5s ease-in-out }
+.door-lock { animation: breathe 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
+.belt-run { animation: beltRun 1.2s linear infinite }
+@keyframes beltRun { to { stroke-dashoffset: -16 } }
+
+/* ------------------------------- presents ------------------------------- */
+
+.gift-box {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  width: clamp(84px, 19vmin, 150px);
+  aspect-ratio: 1;
+  animation: giftWiggle 1.6s ease-in-out infinite;
+  touch-action: manipulation;
+}
+.gift-box:nth-child(2) { animation-delay: 0.8s }
+.gift-open { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) }
+.gift-away { animation: giftAway 0.4s ease-in forwards; pointer-events: none }
+@keyframes giftWiggle {
+  0%, 60%, 100% { transform: rotate(0) translateY(0) }
+  70% { transform: rotate(-7deg) translateY(-6%) }
+  80% { transform: rotate(6deg) translateY(-8%) }
+  90% { transform: rotate(-3deg) translateY(-2%) }
+}
+@keyframes giftAway { to { transform: scale(0.3); opacity: 0 } }
+
+/* things on the shelf of the title screen */
+.shelf-item {
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: clamp(5px, 1.1vmin, 9px);
+  cursor: pointer;
+  width: clamp(40px, 8.5vmin, 68px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: rgba(255, 251, 242, 0.92);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  transition: transform 130ms ease, box-shadow 130ms ease;
+  touch-action: manipulation;
+}
+.shelf-item:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25) }
+.shelf-on { box-shadow: 0 0 0 4px var(--color-tamago), 0 4px 0 rgba(0, 0, 0, 0.25) }
+.toy-roll { animation: toyRoll 1.3s ease-in-out }
+.toy-jump { animation: toyJump 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) }
+@keyframes toyRoll {
+  0%, 100% { transform: translateX(0) rotate(0) }
+  50% { transform: translateX(-140%) rotate(-360deg) }
+}
+@keyframes toyJump {
+  0%, 100% { transform: translateY(0) rotate(0) }
+  40% { transform: translateY(-110%) rotate(200deg) }
+  70% { transform: translateY(-20%) rotate(350deg) }
+}
+
+.title-letter { display: inline-block; animation: bob 2.4s ease-in-out infinite }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

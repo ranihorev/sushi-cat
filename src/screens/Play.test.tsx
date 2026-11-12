@@ -3,6 +3,7 @@ import { StrictMode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CAT_CLIPS } from '../game/audio';
 import type { Letter } from '../game/letters';
+import { ALL_LETTERS } from '../game/letters';
 import { blankProfile } from '../game/store';
 import type { Profile } from '../game/types';
 import { CLIP_MS, clipDurations, contextLock, cutLog, lastContext, playLog } from '../test/audio-stub';
@@ -37,7 +38,9 @@ function Harness({ initial }: { initial: Profile }) {
 }
 
 const start = async (overrides: Partial<Profile> = {}) => {
-  const initial = { ...blankProfile(), ...overrides };
+  /* these tests are about asking; meeting a letter for the first time has its
+     own, further down, which pass `met: []` */
+  const initial = { ...blankProfile(), met: [...ALL_LETTERS], ...overrides };
   profileSeen = initial;
   render(<Harness initial={initial} />);
   await tick(2200); // the cat's hello, then a beat, then the prompt
@@ -305,7 +308,7 @@ describe('feeding the cat', () => {
   });
 
   it('fills the plate one piece at a time', async () => {
-    await start({ settings: { gateChoices: false, roundsPerMeal: 3 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 3 } });
     await feedCorrect();
     expect(screen.getByLabelText(/1 of 3/)).toBeTruthy();
     await feedCorrect();
@@ -313,7 +316,7 @@ describe('feeding the cat', () => {
   });
 
   it('ends the meal after the last piece', async () => {
-    await start({ settings: { gateChoices: false, roundsPerMeal: 3 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 3 } });
     const eaten: Letter[] = [];
     for (let i = 0; i < 3; i++) eaten.push(await feedCorrect());
     await tick(2000);
@@ -507,7 +510,7 @@ describe('gestures that are not an answer', () => {
   });
 
   it('holds the pieces shut until the prompt has been heard, when asked to', async () => {
-    render(<Harness initial={{ ...blankProfile(), settings: { gateChoices: true, roundsPerMeal: 8 } }} />);
+    render(<Harness initial={{ ...blankProfile(), met: [...ALL_LETTERS], settings: { ...blankProfile().settings, gateChoices: true, roundsPerMeal: 8 } }} />);
     await tick(1400); // the prompt has started but not finished
     const target = targetOnScreen();
 
@@ -630,13 +633,13 @@ describe('the gold round', () => {
      answer — a single shimmering piece would point straight at the right one
      and the round would stop being a question at all. */
   it('turns every piece gold, so the gold gives nothing away', async () => {
-    await start({ settings: { gateChoices: false, roundsPerMeal: 1 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 1 } });
     const gold = document.querySelectorAll('.sushi-gold');
     expect(gold).toHaveLength(optionsOnScreen().length);
   });
 
   it('hands over a decoration while he is still watching', async () => {
-    await start({ settings: { gateChoices: false, roundsPerMeal: 1 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 1 } });
     const before = profileSeen.decorations.length;
 
     dragTo(targetOnScreen(), ON_CAT);
@@ -650,7 +653,7 @@ describe('the gold round', () => {
      before turned gold while the cat was still chewing, a full round early. */
   it('does not turn gold while the cat is still eating the round before', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.6); // the gold is the second of two
-    await start({ settings: { gateChoices: false, roundsPerMeal: 2 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 2 } });
     expect(document.querySelectorAll('.sushi-gold')).toHaveLength(0);
 
     dragTo(targetOnScreen(), ON_CAT);
@@ -664,7 +667,7 @@ describe('the gold round', () => {
   it('leaves the ordinary rounds alone', async () => {
     // 0.99 puts the gold round last, so the first one is a plain one
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
-    await start({ settings: { gateChoices: false, roundsPerMeal: 8 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 8 } });
     expect(document.querySelectorAll('.sushi-gold')).toHaveLength(0);
   });
 });
@@ -674,7 +677,7 @@ describe('a run of right answers', () => {
      paper comes down at five. */
   it('brings the paper down at five in a row, and not before', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.99); // and keeps the gold round out of the way
-    await start({ settings: { gateChoices: false, roundsPerMeal: 8 } });
+    await start({ settings: { ...blankProfile().settings, gateChoices: false, roundsPerMeal: 8 } });
 
     for (let i = 0; i < 4; i++) await feedCorrect();
     expect(document.querySelectorAll('.confetti')).toHaveLength(0);
@@ -690,7 +693,7 @@ describe('under StrictMode', () => {
      after one bite — which is what this game did, in dev only, until the
      alive flag was reset on the way back in. */
   it('still finishes a round after being mounted twice', async () => {
-    const initial = blankProfile();
+    const initial = { ...blankProfile(), met: [...ALL_LETTERS] };
     profileSeen = initial;
     render(
       <StrictMode>
@@ -735,5 +738,66 @@ describe('the way out', () => {
     expect(exited).toBe(false);
     fireEvent.pointerDown(screen.getByLabelText('home'));
     expect(exited).toBe(true);
+  });
+});
+
+describe('meeting a new letter', () => {
+  it('shows it alone, with its picture, and says name, sound and word', async () => {
+    await start({ met: [] });
+    await tick(2500);
+    const [only, ...rest] = optionsOnScreen();
+    expect(rest).toEqual([]);
+    const said = playLog.filter((c) => c.includes('/'));
+    expect(said).toEqual(
+      expect.arrayContaining([`letter/${only}`, `prompt/${only}`, `word/${only}`]),
+    );
+    expect(document.querySelector(`[data-hint="${only}"] [data-picture]`)).toBeTruthy();
+  });
+
+  it('is not scored, and is not met a second time', async () => {
+    await start({ met: [] });
+    await tick(2500);
+    const [first] = optionsOnScreen();
+    dragTo(first, ON_CAT);
+    await tick(8000);
+
+    expect(playLog).toContain('cat/nom');
+    expect(profileSeen.letterStats[first]).toBeUndefined();
+    expect(profileSeen.met).toContain(first);
+    expect(screen.getByLabelText(/1 of 8/)).toBeTruthy();
+  });
+
+  it('asks about a letter only after it has been met', async () => {
+    const met = ALL_LETTERS.filter((l) => l !== 'S');
+    await start({ met, activeSet: ['S', 'M'] });
+    for (let i = 0; i < 6 && !mealResult; i++) {
+      await tick(2500);
+      const options = optionsOnScreen();
+      if (options.length === 1) {
+        expect(options).toEqual(['S']);
+        return;
+      }
+      // S may not be on the counter as a choice he is asked for before he has met it
+      expect(targetOnScreen()).not.toBe('S');
+      dragTo(targetOnScreen(), ON_CAT);
+      await settleRound();
+    }
+  });
+});
+
+describe('the picture beside the cat', () => {
+  it('shows the wrong piece with its picture while the cat names it', async () => {
+    await start({ level: 2 });
+    const wrong = distractorOnScreen();
+    dragTo(wrong, ON_CAT);
+    await tick(900);
+    expect(document.querySelector(`[data-hint="${wrong}"] [data-picture]`)).toBeTruthy();
+    await tick(4000);
+    expect(document.querySelector(`[data-hint="${wrong}"]`)).toBeNull();
+  });
+
+  it('never writes the word out, which would give the first letter away', async () => {
+    await start();
+    expect(document.querySelector('[data-hint]')?.textContent ?? '').toBe('');
   });
 });

@@ -409,7 +409,7 @@ for (const L of LETTERS) {
 }
 
 /* Real words and sentences: trim and level, nothing else. */
-const speech = ONLY.length ? ['word', 'name'] : ['word', 'name', 'praise', 'ui', 'cat'];
+const speech = ONLY.length ? ['word', 'name'] : ['word', 'name', 'praise', 'ui', 'cat', 'roll'];
 for (const dir of speech) {
   const files = (await readdir(join(SRC, dir)).catch(() => []))
     .filter((f) => f.endsWith('.mp3'))

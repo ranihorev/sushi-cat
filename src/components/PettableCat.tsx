@@ -6,6 +6,7 @@ interface Props {
   fullness: number;
   mood: Mood;
   className?: string;
+  wear?: readonly string[];
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * `cat/purr` has been downloaded and decoded on every session since the game
  * was built and has never once been played. This is where it goes.
  */
-export function PettableCat({ fullness, mood, className }: Props) {
+export function PettableCat({ fullness, mood, className, wear }: Props) {
   const [petting, setPetting] = useState(false);
   const purrTimer = useRef<number | undefined>(undefined);
 
@@ -53,7 +54,7 @@ export function PettableCat({ fullness, mood, className }: Props) {
       onPointerCancel={stop}
       style={{ touchAction: 'none', cursor: 'pointer' }}
     >
-      <Cat fullness={fullness} mood={mood} petting={petting} />
+      <Cat fullness={fullness} mood={mood} petting={petting} wear={wear} />
     </div>
   );
 }

@@ -269,3 +269,29 @@ describe('day streak', () => {
     expect(p.dayStreak).toBe(1);
   });
 });
+
+describe('two-choice rounds and guessing', () => {
+  const twoChoice = (results: boolean[]) =>
+    results.reduce((p, ok) => recordAnswer(p, 'S', ok, 2), blankProfile());
+
+  it('does not call a letter solid on three of four coin tosses', () => {
+    expect(isSolid(twoChoice([true, true, false, true]), 'S')).toBe(false);
+  });
+
+  it('does call it solid when every two-choice showing was right', () => {
+    expect(isSolid(twoChoice([true, true, true, true]), 'S')).toBe(true);
+  });
+
+  it('forgives one miss again once the two-choice showings have left the window', () => {
+    let p = twoChoice([true, true, true, true]);
+    for (const ok of [true, true, false, true]) p = recordAnswer(p, 'S', ok, 3);
+    expect(isSolid(p, 'S')).toBe(true);
+  });
+
+  it('reads a profile saved before the choices were recorded', () => {
+    const p = blankProfile();
+    p.letterStats.S = { seen: 4, correct: 3, recent: [true, false, true, true], lastSeenAt: 0 };
+    expect(isSolid(p, 'S')).toBe(true);
+    expect(statFor(recordAnswer(p, 'S', true, 2), 'S').easy).toEqual([false, false, false, true]);
+  });
+});

@@ -19,7 +19,11 @@ export function blankProfile(): Profile {
     decorations: ['lantern-left', 'lantern-right'],
     lastPlayed: '',
     dayStreak: 0,
-    settings: { gateChoices: false, roundsPerMeal: 8 },
+    met: [],
+    wordLevel: 1,
+    gifts: [],
+    wearing: {},
+    settings: { gateChoices: false, roundsPerMeal: 8, letterCase: 'pair', wordsAlwaysOpen: false },
   };
 }
 
@@ -30,7 +34,10 @@ export function blankProfile(): Profile {
  * standing he earned rather than starting the alphabet over.
  */
 function normalizeStat(s: LetterStat & { mastery?: number }): LetterStat {
-  if (Array.isArray(s.recent)) return { ...s, recent: s.recent.slice(-WINDOW) };
+  if (Array.isArray(s.recent)) {
+    const recent = s.recent.slice(-WINDOW);
+    return { ...s, recent, easy: alignEasy(s.easy, recent.length) };
+  }
   const right = Math.round((s.mastery ?? 0) * WINDOW);
   const filled = Math.min(WINDOW, s.seen ?? 0);
   return {
@@ -89,12 +96,19 @@ export function recentScore(p: Profile, l: Letter): number {
  * Record the outcome of a round — once per round, scored on the first attempt.
  * Getting there only after two misses isn't knowing it, so it counts as a miss.
  */
-export function recordAnswer(p: Profile, target: Letter, correct: boolean): Profile {
+export function recordAnswer(
+  p: Profile,
+  target: Letter,
+  correct: boolean,
+  /** how many pieces he chose between; two is a coin toss, see `isSolid` */
+  choices = 3,
+): Profile {
   const prev = statFor(p, target);
   const stat: LetterStat = {
     seen: prev.seen + 1,
     correct: prev.correct + (correct ? 1 : 0),
     recent: [...prev.recent, correct].slice(-WINDOW),
+    easy: [...alignEasy(prev.easy, prev.recent.length), choices <= 2].slice(-WINDOW),
     lastSeenAt: p.mealsCompleted,
   };
   return {
@@ -127,10 +141,24 @@ export function recordConfusion(p: Profile, target: Letter, tapped: Letter): Pro
   return { ...p, confusions: { ...p.confusions, [target]: row } };
 }
 
-/** Solid means: seen a full window of times, and right for most of it. */
+/** `easy` cut or padded to sit beside `recent`; an unknown showing was not easy. */
+function alignEasy(easy: boolean[] | undefined, length: number): boolean[] {
+  const e = (easy ?? []).slice(-length);
+  return [...Array.from({ length: length - e.length }, () => false), ...e];
+}
+
+/**
+ * Solid means: seen a full window of times, and right for most of it. If any of
+ * those showings had only two choices, all of them must be right: guessing
+ * passes three of four coin tosses about one time in three, and that was
+ * enough to open the next batch of letters for a child who knew none of them.
+ */
 export function isSolid(p: Profile, l: Letter): boolean {
-  const r = statFor(p, l).recent;
-  return r.length >= WINDOW && r.filter(Boolean).length >= NEEDED;
+  const { recent, easy } = statFor(p, l);
+  if (recent.length < WINDOW) return false;
+  const right = recent.filter(Boolean).length;
+  const anyEasy = alignEasy(easy, recent.length).some(Boolean);
+  return right >= (anyEasy ? WINDOW : NEEDED);
 }
 
 /** How much of the alphabet is in play, and how much of it has stuck. */
@@ -182,4 +210,24 @@ export function noteSession(p: Profile): Profile {
     lastPlayed: d,
     dayStreak: p.lastPlayed === yesterday ? p.dayStreak + 1 : 1,
   };
+}
+
+/** He has been shown this letter, with its sound and its picture, at least once. */
+export function hasMet(p: Profile, l: Letter): boolean {
+  return (p.met ?? []).includes(l) || statFor(p, l).seen > 0;
+}
+
+export function markMet(p: Profile, l: Letter): Profile {
+  return hasMet(p, l) ? p : { ...p, met: [...(p.met ?? []), l] };
+}
+
+/**
+ * What is written on a piece. A letter he is still learning is always the
+ * capital. Once it is solid the small letter joins it, because small letters
+ * are what he will meet in a book.
+ */
+export function glyphFor(p: Profile, l: Letter): string {
+  const c = p.settings.letterCase ?? 'pair';
+  if (c === 'upper' || !isSolid(p, l)) return l;
+  return c === 'lower' ? l.toLowerCase() : l + l.toLowerCase();
 }

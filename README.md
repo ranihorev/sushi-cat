@@ -131,8 +131,7 @@ being fussy about the drop point would test motor control, not letters. A tap
 with no drag answers nothing; the piece hops to show it wants carrying and the
 sound plays again.
 
-**Pedagogy.** The prompt is a sound, never a letter name. Uppercase only.
-No timers, no scores, no losing — a wrong tap gets a puzzled cat and the prompt
+**Pedagogy.** The prompt is a sound, never a letter name. No timers, no scores, no losing — a wrong tap gets a puzzled cat and the prompt
 again; after two misses the right piece glows and the sound repeats. Every round
 ends in success. A meal is 8 pieces, about 3–5 minutes. Repetition across days
 beats length within a day.
@@ -192,17 +191,56 @@ round. Only first-try answers count as correct — getting there after two misse
 is not mastery.
 
 **Letters.** Starts with `S M T A P C`. A new batch of 2–3 unlocks only when
-every letter in the active set is solid (seen 4+ times, recall reliable).
+most of the active set is solid: right 3 of the last 4 times, or 4 of 4 if any
+of those rounds had only two choices, because guesses pass two-choice rounds.
 Add his own name's letters in the parent screen — personal relevance beats
 optimal ordering at this age.
 
 **Adaptation.** Each letter carries a recency-weighted mastery score. Round
-generation is weighted toward weak and stale letters, not uniform random. Wrong
+generation is weighted toward weak and stale letters, not uniform random. A
+letter gains weight for every three meals he has not seen it. Wrong
 taps are recorded as confusion pairs (`P → B`), and at level 3 those exact
 letters are preferred as distractors — practice lands where the errors are.
 
 **Round types.** Sound (the backbone), plus word-initial ("sun … /sss/") and
 letter-name ("where's S?") rounds once a letter is known.
+
+**He meets a letter before he is asked about it.** The first time a letter
+comes up there is one glowing piece on the counter and nothing to get wrong:
+"Look! A new letter! M ... /mmm/ ... moon ... /mmm/", with a picture of the
+moon. He feeds it to the cat and the letter is marked as met (`profile.met`).
+A meet round is not scored. Before this, the first thing he ever heard about a
+new letter was a question, and the only way to learn it was to get it wrong.
+
+**Pictures.** Each of the 26 clue words has a picture (`src/assets/pictures`).
+The picture shows in a bubble next to the cat on meet rounds and word rounds,
+and when he gives the wrong piece the bubble shows what that piece is, so a
+miss teaches him the letter he picked. The pictures are Twemoji (CC-BY 4.0,
+credited on the parent screen), plus three drawn for this game.
+
+**The prompt gets shorter as he gets better.** A sound prompt is "M ... /mmm/"
+while he is learning. Once a letter is solid the letter name is dropped and he
+hears the sound alone, twice. That is the real skill, and the name was a clue.
+
+**Small letters.** A piece shows "M" until that letter is solid, then "Mm".
+The parent screen can change this to capitals only or small letters only.
+
+**Presents.** After a meal there are two wrapped boxes and he opens one. There
+are twelve presents (`game/gifts.ts`): things the cat wears (a bow, a crown,
+sunglasses) and toys. They live on a shelf on the title screen, and a tap puts
+one on the cat or takes it off. He chooses, which a decoration that just
+appears never let him do.
+
+**Sushi roll words.** The fourth door. It opens when he knows the letters of at
+least three words (or from the parent screen). The cat orders a word, with its
+picture, and he builds it from three pieces on a mat. Each piece says its sound
+as it lands. When the roll is full the pieces light up one by one ("/k/ ... /a/
+... /t/"), then the whole word is said, and the cat eats the roll. A wrong
+piece says its own sound and goes back; nothing is lost. Three levels, never
+announced: first he adds only the first sound, then all three, then all three
+with one piece on the counter that does not belong. Words are made only from
+letters he has met (`game/words.ts`, 33 words). A finished visit counts as a
+meal.
 
 **Coming back.** One restaurant decoration is earned per finished meal, plus one
 for the gold round. There are twenty-one of them. The first version had eleven,
@@ -217,8 +255,8 @@ of pieces he ate is pressable too, and each one says itself back — "/mmm/ ... 
 Those recordings are deliberately kept off the answer path, where reading the
 letter back would put two more sounds between him and the next question.
 
-**Three ways to play.** The title screen has three buttons, told apart by
-picture alone. The plain play button is the game above. The belt button is the
+**Four doors.** The title screen is a street with four shop doors, told apart by
+picture alone. The fourth is the roll shop, described above. The plain play button is the game above. The belt button is the
 **sushi train**: the same meal, but the pieces ride slowly along the counter
 and come round again, so he watches for the answer and reaches out to catch it.
 The belt is slow on purpose and stops the moment he touches a piece — a belt he
@@ -234,7 +272,7 @@ No cat comes out until the question has been said, whatever the "wait for the
 prompt" setting is, so there is never anything to tap while he should be
 listening.
 The first version was cats sitting still on cushions, which was dull and did not
-show what to do. All three games use the same rounds, weighting, mastery and
+show what to do. The first three games use the same rounds, weighting, mastery and
 mix-up records, and a finished cafe visit counts as a meal. The cafe starts with
 three cats and one more moves in after each meal until all six live there.
 
@@ -243,8 +281,9 @@ three cats and one more moves in after each meal until all six live there.
 Bottom-right of the title screen. During play, the house button in the top-left
 corner goes back to the title screen.
 Shows per-letter mastery, which mix-ups he makes, a manual override for the
-active set, name entry, pieces per meal, and a "wait for the prompt" toggle —
-turn that on if he taps at random instead of listening.
+active set, name entry, pieces per meal, small letters, a switch that keeps the roll shop
+open, and a "wait for the prompt" toggle — turn that on if he taps at random
+instead of listening.
 
 ## Layout
 
@@ -255,8 +294,12 @@ src/
     engine.ts    round generation, weighting, difficulty
     store.ts     profile, mastery, unlocks (localStorage)
     audio.ts     clip preload/playback, synthesized SFX
-  components/    Cat, Sushi, Restaurant, Plate, Confetti, PettableCat
-  screens/       Title, Play (sushi and sushi train), Cafe, Rest, Parent
+    words.ts     the words for the roll shop, and when it opens
+    gifts.ts     the presents, and what the cat is wearing
+  assets/pictures/  one picture for each clue word and roll word
+  components/    Cat, Sushi, Restaurant, Plate, Confetti, PettableCat,
+                 Picture, HintBubble, Wear
+  screens/       Title, Play (sushi and sushi train), Cafe, Rolls, Rest, Parent
 scripts/
   generate-audio.mjs       the 114 letter clips
   generate-cat-sounds.mjs  meows, purr, yawn, chewing

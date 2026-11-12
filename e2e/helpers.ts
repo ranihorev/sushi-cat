@@ -50,8 +50,50 @@ export async function recordClips(page: Page) {
 export const playedClips = (page: Page) => page.evaluate(() => (window as any).__played as string[]);
 export const clearClips = (page: Page) => page.evaluate(() => ((window as any).__played.length = 0));
 
-/** Start a meal and wait for the first prompt to finish. */
-export async function startMeal(page: Page, button = 'play') {
+const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+/**
+ * Put a saved game on the tablet before the page opens. Only the first load of
+ * a test is seeded, so what the game then saves is what a reload reads back.
+ */
+export async function seedProfile(page: Page, profile: Record<string, unknown>) {
+  await page.addInitScript((p) => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.setItem(
+      'sushi-cat.profile.v2',
+      JSON.stringify({
+        version: 2,
+        activeSet: ['S', 'M', 'T', 'A', 'P', 'C'],
+        letterStats: {},
+        confusions: {},
+        ...p,
+      }),
+    );
+  }, profile);
+}
+
+/** a child who has been shown every letter, so the first round is a question */
+export const MET_ALL = { met: ALL };
+
+/** a child who knows the six starter letters well: the roll shop is open */
+export const KNOWS_STARTERS = {
+  met: ALL,
+  letterStats: Object.fromEntries(
+    ['S', 'M', 'T', 'A', 'P', 'C'].map((l) => [
+      l,
+      { seen: 8, correct: 8, recent: [true, true, true, true], easy: [false, false, false, false], lastSeenAt: 0 },
+    ]),
+  ),
+};
+
+/**
+ * Start a meal and wait for the first prompt to finish. The child has met his
+ * letters already unless a test seeds something else first: these tests are
+ * about questions, and a brand new child's first rounds are introductions.
+ */
+export async function startMeal(page: Page, button = 'play', profile: Record<string, unknown> = MET_ALL) {
+  await seedProfile(page, profile);
   await page.goto('/');
   await page.getByLabel(button, { exact: true }).click();
   await page.locator('.sushi-btn, .cafe-pop').first().waitFor({ state: 'visible' });

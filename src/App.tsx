@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DECORATIONS } from './components/Restaurant';
-import { CAT_CLIPS, UI_CLIPS, audio, clipsForLetter } from './game/audio';
+import { CAT_CLIPS, OPTIONAL_CLIPS, UI_CLIPS, audio, clipsForLetter } from './game/audio';
+import { wordPool } from './game/words';
 import type { Letter } from './game/letters';
 import { ALL_LETTERS } from './game/letters';
 import { loadProfile, maybeUnlockBatch, noteSession, saveProfile } from './game/store';
@@ -9,6 +10,7 @@ import { Cafe } from './screens/Cafe';
 import { Parent } from './screens/Parent';
 import { Play } from './screens/Play';
 import { Rest } from './screens/Rest';
+import { Rolls } from './screens/Rolls';
 import { Title } from './screens/Title';
 
 type Screen = 'title' | 'play' | 'rest' | 'parent';
@@ -78,13 +80,18 @@ export default function App() {
       ...UI_CLIPS,
       ...CAT_CLIPS,
     ]);
+    // loaded if they are there; the game does not wait for them or need them
+    audio.preloadIdle([
+      ...OPTIONAL_CLIPS,
+      ...(m === 'rolls' ? wordPool(profile).map((w) => w.clip) : []),
+    ]);
     // the greeting belongs to Play, which plays it in front of the first prompt
     // rather than under it
     audio.preloadIdle(ALL_LETTERS.flatMap(clipsForLetter));
     update(noteSession);
     setEaten([]);
     setScreen('play');
-  }, [profile.activeSet, update]);
+  }, [profile, update]);
 
   const handleMealComplete = useCallback(
     (mealLetters: Letter[]) => {
@@ -113,7 +120,12 @@ export default function App() {
   return (
     <div className="h-full w-full">
       {screen === 'title' && (
-        <Title profile={profile} onStart={start} onParent={() => setScreen('parent')} />
+        <Title
+          profile={profile}
+          onStart={start}
+          onParent={() => setScreen('parent')}
+          onProfileChange={update}
+        />
       )}
 
       {screen === 'play' && mode === 'cafe' && (
@@ -126,7 +138,17 @@ export default function App() {
         />
       )}
 
-      {screen === 'play' && mode !== 'cafe' && (
+      {screen === 'play' && mode === 'rolls' && (
+        <Rolls
+          key={profile.mealsCompleted}
+          profile={profile}
+          onProfileChange={update}
+          onMealComplete={handleMealComplete}
+          onExit={() => setScreen('title')}
+        />
+      )}
+
+      {screen === 'play' && mode !== 'cafe' && mode !== 'rolls' && (
         <Play
           key={profile.mealsCompleted}
           profile={profile}
@@ -145,6 +167,7 @@ export default function App() {
           unlockedLetters={unlockedLetters}
           onAgain={() => start(mode)}
           onHome={() => setScreen('title')}
+          onProfileChange={update}
         />
       )}
 

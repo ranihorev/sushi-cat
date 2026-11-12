@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOptions, demote, nextRound, optionCountFor, promote } from './engine';
+import { buildOptions, demote, nextRound, optionCountFor, pickTarget, promote } from './engine';
 import type { Letter } from './letters';
 import { BATCHES, LETTERS, STARTER_SET, looksAlike, soundsAlike } from './letters';
 import { WINDOW, blankProfile, recordAnswer, recordConfusion, unlockAllLetters } from './store';
@@ -14,7 +14,11 @@ const stages = (): Letter[][] => {
   return out;
 };
 
-const withActive = (active: Letter[]): Profile => ({ ...blankProfile(), activeSet: [...active] });
+const withActive = (active: Letter[]): Profile => ({
+  ...blankProfile(),
+  activeSet: [...active],
+  met: [...active],
+});
 
 const master = (p: Profile, letters: Letter[]): Profile => {
   let out = p;
@@ -144,8 +148,9 @@ describe('choosing the target', () => {
     const p = withActive([...STARTER_SET]);
     const recent: Letter[] = ['S', 'S', 'M'];
     let hits = 0;
-    for (let i = 0; i < 600; i++) if (nextRound(p, 1, recent).target === 'S') hits++;
-    expect(hits).toBeLessThan(60);
+    // expected about 230 of 3000; an even share of the five letters would be 600
+    for (let i = 0; i < 3000; i++) if (nextRound(p, 1, recent).target === 'S') hits++;
+    expect(hits).toBeLessThan(300);
   });
 });
 
@@ -189,5 +194,55 @@ describe('kind of question', () => {
     let sound = 0;
     for (let i = 0; i < 600; i++) if (nextRound(p, 1, []).kind === 'sound') sound++;
     expect(sound / 600).toBeGreaterThan(0.5);
+  });
+});
+
+describe('review of letters he has not seen for a while', () => {
+  it('brings a known letter back more often after many meals away', () => {
+    let p = blankProfile();
+    p = { ...p, activeSet: ['S', 'M', 'T'] };
+    for (const l of p.activeSet) for (let i = 0; i < WINDOW; i++) p = recordAnswer(p, l, true);
+    // S was last seen at meal 0; M and T are seen again at meal 12
+    p = { ...p, mealsCompleted: 12 };
+    for (const l of ['M', 'T'] as const) p = recordAnswer(p, l, true);
+
+    let s = 0;
+    const n = 3000;
+    for (let i = 0; i < n; i++) if (pickTarget(p, []) === 'S') s++;
+    // equal weights would give a third; stale S weighs 4 against 1 and 1
+    expect(s / n).toBeGreaterThan(0.55);
+  });
+});
+
+describe('a letter he has not met', () => {
+  it('is shown alone before it is ever asked', () => {
+    const p = { ...blankProfile(), met: [] };
+    for (let i = 0; i < 50; i++) {
+      const r = nextRound(p, 3, []);
+      expect(r.kind).toBe('meet');
+      expect(r.options).toEqual([r.target]);
+    }
+  });
+
+  it('counts as met once he has answered it, for profiles from before this', () => {
+    let p: Profile = { ...blankProfile(), met: undefined, activeSet: ['S', 'M'] };
+    p = recordAnswer(recordAnswer(p, 'S', true), 'M', false);
+    for (let i = 0; i < 50; i++) expect(nextRound(p, 1, []).kind).not.toBe('meet');
+  });
+});
+
+describe('a letter he knows', () => {
+  it('is asked by its sound alone, without the name in front', () => {
+    let p: Profile = { ...blankProfile(), activeSet: ['S', 'M'] };
+    for (const l of p.activeSet) for (let i = 0; i < WINDOW; i++) p = recordAnswer(p, l, true);
+    const sounds = Array.from({ length: 200 }, () => nextRound(p, 1, [])).filter((r) => r.kind === 'sound');
+    expect(sounds.length).toBeGreaterThan(0);
+    for (const r of sounds) expect(r.bare).toBe(true);
+  });
+
+  it('keeps the name in front while he is still learning it', () => {
+    let p: Profile = { ...blankProfile(), activeSet: ['S', 'M'] };
+    for (const l of p.activeSet) p = recordAnswer(p, l, true);
+    for (let i = 0; i < 50; i++) expect(nextRound(p, 1, []).bare).toBe(false);
   });
 });

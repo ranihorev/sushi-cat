@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Cat, REACTIONS, type Mood, type Reaction } from '../components/Cat';
 import { Confetti } from '../components/Confetti';
+import { HintBubble } from '../components/HintBubble';
 import { HomeButton } from '../components/HomeButton';
 import { Plate } from '../components/Plate';
 import { Counter, DECORATIONS, Restaurant } from '../components/Restaurant';
@@ -16,8 +17,9 @@ import {
 } from '../game/audio';
 import { demote, nextRound, optionCountFor, promote } from '../game/engine';
 import type { Letter } from '../game/letters';
-import { LETTERS } from '../game/letters';
-import { recordAnswer, recordConfusion } from '../game/store';
+import { REACTION_SOUND } from '../game/reactionSounds';
+import { glyphFor, markMet, recordAnswer, recordConfusion } from '../game/store';
+import { wornBy } from '../game/gifts';
 import type { GameMode, Level, Profile, Round } from '../game/types';
 
 interface Props {
@@ -74,27 +76,6 @@ const PIECE_VOICE_MS = 1500;
    fired separately as the screen opened. */
 const GREETING: Array<string | number> = ['cat/greet', GREETING_GAP_MS];
 
-/** Which noise goes with which reaction. The animation is the joke; this is the
-    punchline arriving at the same moment. */
-const REACTION_SOUND: Record<Reaction, () => void> = {
-  hiccup: () => audio.hiccup(),
-  burp: () => audio.burp(),
-  spicy: () => audio.steam(),
-  balloon: () => audio.inflate(),
-  sleepy: () => audio.purr(),
-  hearts: () => audio.twinkle(),
-  stars: () => audio.twinkle(),
-  dizzy: () => audio.dizzy(),
-  bubble: () => audio.bubble(),
-  gulp: () => audio.gulp(),
-  fishbone: () => audio.sparkle(),
-  lick: () => audio.lick(),
-  dance: () => audio.dance(),
-  huge: () => audio.boing(),
-  sneeze: () => audio.sneeze(),
-  float: () => audio.twinkle(),
-};
-
 /* The sushi train. The pieces ride slowly along the counter and come round
    again, so the answer is something he watches for and reaches out to catch.
    Slow on purpose, and it stops dead the moment he touches a piece: a belt he
@@ -143,6 +124,8 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
   const [goldenRound, setGoldenRound] = useState(false);
   /** bumped to send another fall of paper down the screen */
   const [party, setParty] = useState(0);
+  /** the wrong piece he has just handed over, while the cat says what it is */
+  const [given, setGiven] = useState<Letter | null>(null);
   /** a decoration that has just landed mid-meal, for the gold piece */
   const [spotlight, setSpotlight] = useState<string | null>(null);
 
@@ -283,7 +266,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
     (r: Round, intro: Array<string | number> = []) => {
       answered.current = false;
       setRound(r);
-      setPieceState({});
+      /* the one piece of a letter he is meeting glows: it is the thing to pick up */
+      setPieceState(r.kind === 'meet' ? { [r.target]: 'hint' } : {});
+      setGiven(null);
       setMisses(0);
       setMood('idle');
       setLocked(true);
@@ -292,7 +277,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
       /* Read through the ref, not a counter: StrictMode opens the first round
          twice, and anything that counted its own calls would be a round out in
          development and correct in production. */
-      setGoldenRound(eatenRef.current.length === goldenAt.current);
+      setGoldenRound(eatenRef.current.length === goldenAt.current && r.kind !== 'meet');
       /* The eye drift used to be set on every pick and never put back, so the
          cat spent the rest of the meal glancing off to one side. */
       setLook(0);
@@ -370,9 +355,12 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
         audio.chomp();
       });
 
-      const first = misses === 0;
+      /* Meeting a letter is not an answer: there was nothing to choose between,
+         so it is not scored and it neither builds nor breaks a run. */
+      const meet = round.kind === 'meet';
+      const first = misses === 0 && !meet;
       const nextEaten = [...eaten, letter];
-      const nextStreak = first ? streak + 1 : 0;
+      const nextStreak = meet ? streak : first ? streak + 1 : 0;
       const wasGolden = goldenRound;
       let nextLevel = level;
       if (first && nextStreak > 0 && nextStreak % 3 === 0 && level < 3) nextLevel = promote(level);
@@ -396,7 +384,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
         REACTION_SOUND[rx]();
 
         setEaten(nextEaten);
-        onProfileChange((p) => recordAnswer(p, round.target, first));
+        onProfileChange((p) =>
+          meet ? markMet(p, round.target) : recordAnswer(p, round.target, first, round.options.length),
+        );
         setStreak(nextStreak);
         if (nextLevel !== level) {
           setLevel(nextLevel);
@@ -407,9 +397,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
            brings the restaurant lights up and holds them up; five sends the
            paper down as well. A single miss takes it all away again, quietly
            and with no sound of its own. */
-        if (nextStreak === FEVER_AT) audio.fever();
-        if (nextStreak >= PARTY_AT && nextStreak % PARTY_AT === 0) setParty((n) => n + 1);
-        if (nextStreak >= FEVER_AT) {
+        if (first && nextStreak === FEVER_AT) audio.fever();
+        if (first && nextStreak >= PARTY_AT && nextStreak % PARTY_AT === 0) setParty((n) => n + 1);
+        if (first && nextStreak >= FEVER_AT) {
           setCheer(nextStreak >= 6 ? '🎉' : '⭐️');
           audio.sparkle();
           after(1400, () => setCheer(null));
@@ -500,6 +490,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
     audio.whoosh();
     setPieceState({ [letter]: 'sniff' });
     setMood('sniff');
+    setGiven(letter);
     onProfileChange((p) => recordConfusion(p, round.target, letter));
 
     if (m >= 2 && level > 1) {
@@ -527,6 +518,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
       after(YUCK_MS, () => {
         setMood('idle');
         setLocked(false);
+        setGiven(null);
         setPieceState(m >= 2 ? { [round.target]: 'hint' } : {});
         /* On the second miss the right piece starts glowing, so the glow does the
            pointing. Saying "this one" on top of it just added a phrase he has to
@@ -652,10 +644,22 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
   }, [train, round, layBelt]);
 
   const fullness = eaten.length / total;
+  const wear = useMemo(() => wornBy(profile), [profile]);
   const optionCount = optionCountFor(level);
   /** three right in a row and the lights come up; one miss and they go down */
   const fever = streak >= FEVER_AT;
-  const wordHint = round.kind === 'word' ? LETTERS[round.target].word : null;
+  /* The picture beside the cat. For a word question it is the word, with no
+     letter on it. When he meets a letter it is the letter and its picture
+     together. And when he hands over the wrong piece it is that piece's letter
+     and picture, while the cat says its name and sound — so the mistake has a
+     face as well as a sound. */
+  const hint: { letter: Letter; glyph: string | null; big?: boolean } | null = given
+    ? { letter: given, glyph: given }
+    : round.kind === 'meet'
+      ? { letter: round.target, glyph: `${round.target}${round.target.toLowerCase()}`, big: true }
+      : round.kind === 'word'
+        ? { letter: round.target, glyph: null }
+        : null;
 
   /* A piece that has left the counter has to stay in front of the cat, or the
      whole refusal happens behind his head where none of it can be seen. */
@@ -680,6 +684,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
         >
           <Sushi
             letter={l}
+            glyph={glyphFor(profileRef.current, l)}
             index={i}
             state={pieceState[l] ?? 'rest'}
             disabled={locked || gated}
@@ -733,19 +738,27 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
 
           <div
             ref={catRef}
-            className="h-[clamp(170px,34vh,360px)] w-[clamp(210px,40vh,420px)] shrink"
+            className="relative h-[clamp(170px,34vh,360px)] w-[clamp(210px,40vh,420px)] shrink"
           >
-            <Cat fullness={fullness} mood={mood} look={look} reaction={reaction} />
+            <Cat fullness={fullness} mood={mood} look={look} reaction={reaction} wear={wear} />
+            {hint && (
+              <HintBubble
+                key={`${hint.letter}-${hint.glyph ?? ''}`}
+                letter={hint.letter}
+                glyph={hint.glyph}
+                big={hint.big}
+                className={`absolute top-0 left-[86%] ${
+                  hint.big
+                    ? 'h-[clamp(104px,26vmin,220px)] w-[clamp(92px,22vmin,190px)]'
+                    : 'h-[clamp(76px,17vmin,150px)] w-[clamp(76px,17vmin,150px)]'
+                }`}
+              />
+            )}
           </div>
 
           <Plate eaten={eaten} total={total} />
 
           <div className="mt-1 flex items-center gap-3">
-            {wordHint && (
-              <span className="rounded-full bg-black/35 px-4 py-1.5 text-lg font-bold text-white/75">
-                {wordHint}
-              </span>
-            )}
             <button
               type="button"
               aria-label="say it again"
