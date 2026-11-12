@@ -14,7 +14,11 @@ const stages = (): Letter[][] => {
   return out;
 };
 
-const withActive = (active: Letter[]): Profile => ({ ...blankProfile(), activeSet: [...active] });
+const withActive = (active: Letter[]): Profile => ({
+  ...blankProfile(),
+  activeSet: [...active],
+  met: [...active],
+});
 
 const master = (p: Profile, letters: Letter[]): Profile => {
   let out = p;
@@ -206,5 +210,38 @@ describe('review of letters he has not seen for a while', () => {
     for (let i = 0; i < n; i++) if (pickTarget(p, []) === 'S') s++;
     // equal weights would give a third; stale S weighs 4 against 1 and 1
     expect(s / n).toBeGreaterThan(0.55);
+  });
+});
+
+describe('a letter he has not met', () => {
+  it('is shown alone before it is ever asked', () => {
+    const p = { ...blankProfile(), met: [] };
+    for (let i = 0; i < 50; i++) {
+      const r = nextRound(p, 3, []);
+      expect(r.kind).toBe('meet');
+      expect(r.options).toEqual([r.target]);
+    }
+  });
+
+  it('counts as met once he has answered it, for profiles from before this', () => {
+    let p: Profile = { ...blankProfile(), met: undefined, activeSet: ['S', 'M'] };
+    p = recordAnswer(recordAnswer(p, 'S', true), 'M', false);
+    for (let i = 0; i < 50; i++) expect(nextRound(p, 1, []).kind).not.toBe('meet');
+  });
+});
+
+describe('a letter he knows', () => {
+  it('is asked by its sound alone, without the name in front', () => {
+    let p: Profile = { ...blankProfile(), activeSet: ['S', 'M'] };
+    for (const l of p.activeSet) for (let i = 0; i < WINDOW; i++) p = recordAnswer(p, l, true);
+    const sounds = Array.from({ length: 200 }, () => nextRound(p, 1, [])).filter((r) => r.kind === 'sound');
+    expect(sounds.length).toBeGreaterThan(0);
+    for (const r of sounds) expect(r.bare).toBe(true);
+  });
+
+  it('keeps the name in front while he is still learning it', () => {
+    let p: Profile = { ...blankProfile(), activeSet: ['S', 'M'] };
+    for (const l of p.activeSet) p = recordAnswer(p, l, true);
+    for (let i = 0; i < 50; i++) expect(nextRound(p, 1, []).bare).toBe(false);
   });
 });

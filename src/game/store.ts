@@ -19,7 +19,11 @@ export function blankProfile(): Profile {
     decorations: ['lantern-left', 'lantern-right'],
     lastPlayed: '',
     dayStreak: 0,
-    settings: { gateChoices: false, roundsPerMeal: 8 },
+    met: [],
+    wordLevel: 1,
+    gifts: [],
+    wearing: {},
+    settings: { gateChoices: false, roundsPerMeal: 8, letterCase: 'pair', wordsAlwaysOpen: false },
   };
 }
 
@@ -206,4 +210,24 @@ export function noteSession(p: Profile): Profile {
     lastPlayed: d,
     dayStreak: p.lastPlayed === yesterday ? p.dayStreak + 1 : 1,
   };
+}
+
+/** He has been shown this letter, with its sound and its picture, at least once. */
+export function hasMet(p: Profile, l: Letter): boolean {
+  return (p.met ?? []).includes(l) || statFor(p, l).seen > 0;
+}
+
+export function markMet(p: Profile, l: Letter): Profile {
+  return hasMet(p, l) ? p : { ...p, met: [...(p.met ?? []), l] };
+}
+
+/**
+ * What is written on a piece. A letter he is still learning is always the
+ * capital. Once it is solid the small letter joins it, because small letters
+ * are what he will meet in a book.
+ */
+export function glyphFor(p: Profile, l: Letter): string {
+  const c = p.settings.letterCase ?? 'pair';
+  if (c === 'upper' || !isSolid(p, l)) return l;
+  return c === 'lower' ? l.toLowerCase() : l + l.toLowerCase();
 }

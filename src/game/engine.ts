@@ -1,7 +1,7 @@
 import type { Letter } from './letters';
 import { LETTERS, looksAlike, soundsAlike } from './letters';
 import type { Level, Profile, Round, RoundKind } from './types';
-import { isSolid, recentScore, statFor } from './store';
+import { hasMet, isSolid, recentScore, statFor } from './store';
 
 export const optionCountFor = (level: Level) => (level === 1 ? 2 : level === 2 ? 3 : 4);
 
@@ -131,8 +131,16 @@ function pickKind(p: Profile, target: Letter): RoundKind {
 
 export function nextRound(p: Profile, level: Level, recent: Letter[]): Round {
   const target = pickTarget(p, recent);
+  /* A letter is shown to him before it is ever asked: alone on the counter,
+     with its sound and its picture. */
+  if (!hasMet(p, target)) return { kind: 'meet', target, options: [target] };
+  const kind = pickKind(p, target);
   return {
-    kind: pickKind(p, target),
+    kind,
+    /* While he is learning a letter its name leads the sound in. Once he knows
+       it the name is dropped, or he can answer from the name and never listen
+       to the sound at all. */
+    bare: kind === 'sound' && isSolid(p, target),
     target,
     options: buildOptions(p, target, optionCountFor(level), level >= 3),
   };

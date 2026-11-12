@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cat, type CoatName, type Mood } from '../components/Cat';
 import { Confetti } from '../components/Confetti';
+import { HintBubble } from '../components/HintBubble';
 import { HomeButton } from '../components/HomeButton';
 import {
   audio,
@@ -13,7 +14,7 @@ import {
 } from '../game/audio';
 import { demote, nextRound, promote } from '../game/engine';
 import type { Letter } from '../game/letters';
-import { recordAnswer, recordConfusion } from '../game/store';
+import { glyphFor, markMet, recordAnswer, recordConfusion } from '../game/store';
 import type { Level, Profile, Round } from '../game/types';
 
 interface Props {
@@ -85,6 +86,8 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
   const [hand, setHand] = useState<number | null>(null);
   const [party, setParty] = useState(0);
   const [heard, setHeard] = useState(0);
+  /** the wrong cat he has just tapped, while it says its own letter */
+  const [given, setGiven] = useState<Letter | null>(null);
 
   /* The popping runs on refs, not state: it is a loop of timers that has to
      read the latest cups and the latest round from inside callbacks that were
@@ -269,7 +272,9 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       paused.current = true;
       busy.current = true;
       misses.current = 0;
-      hintNext.current = false;
+      setGiven(null);
+      /* a letter he is meeting comes up glowing and stays up a long time */
+      hintNext.current = r.kind === 'meet';
       /* the right cat is the first one up in the very first round, so the
          first thing that happens in the cafe is something he can get right */
       sinceTarget.current = doneRef.current.length === 0 ? 2 : 1;
@@ -323,8 +328,11 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       void audio.oneShot('cat/purr', 0.9);
       audio.happy();
 
-      const first = misses.current === 0;
-      const nextStreak = first ? streak.current + 1 : 0;
+      /* meeting a letter is not an answer: nothing is scored, and a run is
+         neither built nor broken by it */
+      const meet = r.kind === 'meet';
+      const first = misses.current === 0 && !meet;
+      const nextStreak = meet ? streak.current : first ? streak.current + 1 : 0;
       streak.current = nextStreak;
       let nextLevel = levelRef.current;
       if (first && nextStreak % 3 === 0 && nextLevel < 3) nextLevel = promote(nextLevel);
@@ -337,13 +345,15 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
         doneRef.current = done;
         after(420, () => setFriends(done));
 
-        onProfileChange((p) => recordAnswer(p, r.target, first, r.options.length));
+        onProfileChange((p) =>
+          meet ? markMet(p, r.target) : recordAnswer(p, r.target, first, r.options.length),
+        );
         if (nextLevel !== levelRef.current) {
           levelRef.current = nextLevel;
           setLevel(nextLevel);
           onProfileChange((p) => ({ ...p, level: nextLevel }));
         }
-        if (nextStreak >= 5 && nextStreak % 5 === 0) setParty((n) => n + 1);
+        if (first && nextStreak >= 5 && nextStreak % 5 === 0) setParty((n) => n + 1);
         if (Math.random() < 0.35) void audio.oneShot(randomPraise());
         await audio.speak([catSound(nextStreak >= 3 ? 'excited' : 'happy')]);
         if (!alive.current) return;
@@ -368,6 +378,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
     misses.current = m;
     streak.current = 0;
     patchPop(pop.id, { state: 'curious' });
+    setGiven(pop.letter);
     sinkAll(pop.id);
     onProfileChange((p) => recordConfusion(p, r.target, pop.letter));
     if (m >= 2) {
@@ -389,12 +400,22 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
       );
       if (!alive.current) return;
       sink(pop.id);
+      setGiven(null);
       askThenResume([450, ...promptClips(r)], fallbackPrompt(r), 5000);
     });
   };
 
   const moodFor = (s: PopState): Mood =>
     s === 'curious' ? 'sniff' : s === 'caught' || s === 'leaping' ? 'happy' : 'idle';
+
+  /* the picture by the say-again button: see the same thing in Play.tsx */
+  const hint: { letter: Letter; glyph: string | null } | null = given
+    ? { letter: given, glyph: given }
+    : round.kind === 'meet'
+      ? { letter: round.target, glyph: `${round.target}${round.target.toLowerCase()}` }
+      : round.kind === 'word'
+        ? { letter: round.target, glyph: null }
+        : null;
 
   const holes = cups.length;
   const size = `min(${Math.floor(92 / holes)}vw, 36vh, 300px)`;
@@ -436,6 +457,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
           })}
         </div>
 
+        <div className="flex items-center gap-3">
         <button
           type="button"
           aria-label="say it again"
@@ -457,6 +479,15 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
             />
           </svg>
         </button>
+          {hint && (
+            <HintBubble
+              key={`${hint.letter}-${hint.glyph ?? ''}`}
+              letter={hint.letter}
+              glyph={hint.glyph}
+              className="h-[clamp(64px,13vmin,120px)] w-[clamp(64px,13vmin,120px)]"
+            />
+          )}
+        </div>
       </div>
 
       {/* the teacups, on the cafe table */}
@@ -493,7 +524,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
                     style={{
                       width: `calc(${size} * 0.46)`,
                       height: `calc(${size} * 0.46)`,
-                      fontSize: `calc(${size} * 0.34)`,
+                      fontSize: `calc(${size} * ${glyphFor(profileRef.current, pop.letter).length > 1 ? 0.23 : 0.34})`,
                       transform: `rotate(${pop.id % 2 ? -4 : 4}deg)`,
                       /* held up just over his ears, so it reads as his card */
                       marginBottom: `calc(${size} * -0.1)`,
@@ -501,7 +532,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
                       zIndex: 1,
                     }}
                   >
-                    {pop.letter}
+                    {glyphFor(profileRef.current, pop.letter)}
                   </span>
                   <span className="block w-full" style={{ height: `calc(${size} * 0.84)` }}>
                     <Cat

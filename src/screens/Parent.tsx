@@ -13,7 +13,8 @@ import {
   unlockAllLetters,
   withNameLetters,
 } from '../game/store';
-import type { Profile } from '../game/types';
+import type { LetterCase, Profile } from '../game/types';
+import { knownWords } from '../game/words';
 
 interface Props {
   profile: Profile;
@@ -95,7 +96,9 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
           </div>
           <p className="mb-2 text-xs text-white/35">
             A letter counts as solid once he's had it {WINDOW} times and got {NEEDED} of those
-            right first try. New letters unlock on their own, 2–3 at a time, once most of the
+            right first try — or all {WINDOW}, if any of them had only two choices, because
+            guessing passes those too easily. A new letter is shown to him with its sound and
+            picture before it is ever asked. New letters unlock on their own, 2–3 at a time, once most of the
             current set is solid. Only override that if he's clearly bored.
           </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
@@ -199,6 +202,54 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
             </label>
 
             <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+              <span className="text-sm">
+                <span className="font-bold">Small letters</span>
+                <br />
+                <span className="text-xs text-white/40">
+                  How a letter he already knows is written. New letters are always capitals.
+                </span>
+              </span>
+              <select
+                aria-label="Small letters"
+                value={profile.settings.letterCase}
+                onChange={(e) =>
+                  onProfileChange((p) => ({
+                    ...p,
+                    settings: { ...p.settings, letterCase: e.target.value as LetterCase },
+                  }))
+                }
+                className="shrink-0 rounded-lg bg-white/10 px-2 py-2 text-sm font-bold outline-none"
+              >
+                <option value="upper">M — capitals only</option>
+                <option value="pair">Mm — both, once known</option>
+                <option value="lower">m — small, once known</option>
+              </select>
+            </label>
+
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+              <span className="text-sm">
+                <span className="font-bold">Roll shop always open</span>
+                <br />
+                <span className="text-xs text-white/40">
+                  The word game opens by itself once he knows the letters for three words (
+                  {knownWords(profile).length} now). Turn this on to open it today.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                aria-label="Roll shop always open"
+                checked={profile.settings.wordsAlwaysOpen}
+                onChange={(e) =>
+                  onProfileChange((p) => ({
+                    ...p,
+                    settings: { ...p.settings, wordsAlwaysOpen: e.target.checked },
+                  }))
+                }
+                className="h-6 w-6 shrink-0 accent-tamago"
+              />
+            </label>
+
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
               <span className="text-sm font-bold">Pieces per meal</span>
               <input
                 type="number"
@@ -270,6 +321,9 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
             Reset progress
           </button>
         </section>
+        <p className="mt-6 text-xs text-white/30">
+          Pictures: Twemoji, © Twitter, Inc and other contributors, CC-BY 4.0.
+        </p>
       </div>
     </div>
   );

@@ -397,6 +397,14 @@ export const promptClips = (round: Round): Array<Clip | number> => {
      between, which is the whole prompt rather than a repeat of it. */
   if (round.kind === 'word') return [`word/${L}`, 280, `prompt/${L}`];
   if (round.kind === 'name') return [`name/${L}`];
+  /* Meeting a letter: its name, its sound, the word with its picture on the
+     screen, and the sound once more. "S ... /sss/ ... Sun! ... /sss/". */
+  if (round.kind === 'meet') {
+    return ['ui/new-letter', 250, `letter/${L}`, 420, `prompt/${L}`, 600, `word/${L}`, 380, `prompt/${L}`];
+  }
+  /* A letter he knows is asked by its sound alone, said twice with a beat
+     between: a bare /t/ is a tenth of a second and gone before he looks up. */
+  if (round.bare) return [`prompt/${L}`, STOP_LETTERS.has(L) ? 560 : 460, `prompt/${L}`];
   /* The letter's name, then its sound: "M ... /mmm/". The name is the easy
      part to catch and primes him for the sound, which for a stop is barely a
      tenth of a second. Stops get a longer beat before the sound lands. */
@@ -458,6 +466,24 @@ export const UI_CLIPS: Clip[] = [
   ...Array.from({ length: PRAISE_COUNT }, (_, i) => `praise/${i + 1}`),
 ];
 
+/* Lines recorded for the redesign. The game is complete without them: a clip
+   that is not on disk yet is skipped (or, for a word, said by the tablet's own
+   voice), so these are loaded when they exist and never required. */
+export const OPTIONAL_CLIPS: Clip[] = ['ui/new-letter', 'ui/make-word', 'ui/made-word', 'ui/pick-present'];
+
+/**
+ * Say one whole word and wait for it. A recorded clip when there is one; the
+ * tablet's own voice when there is not. That is safe for a whole word in a way
+ * it never is for a letter sound, which speech synthesis reads as a letter name.
+ */
+export async function sayWord(clip: Clip, text: string): Promise<void> {
+  const buf = await audio.load(clip);
+  if (buf) return audio.speak([clip]);
+  audio.stopVoice();
+  sayFallback(text, 0.85);
+  await wait(900);
+}
+
 /* SpeechSynthesis fallback — only used until the real clips exist. */
 export function sayFallback(text: string, rate = 0.8) {
   if (!window.speechSynthesis) return;
@@ -475,6 +501,9 @@ export const fallbackIdentify = (round: Round, given: Letter) => () => {
 
 export const fallbackPrompt = (round: Round) => {
   const info = LETTERS[round.target];
+  if (round.kind === 'meet') {
+    return () => sayFallback(`${round.target}. ${info.sound.replaceAll('/', '')}. ${info.word}.`);
+  }
   if (round.kind === 'word') return () => sayFallback(`${info.word}. ${info.word} starts with`);
   if (round.kind === 'name') return () => sayFallback(`Where is ${round.target}?`);
   return () => sayFallback(`${round.target}. ${info.sound.replaceAll('/', '')}`);

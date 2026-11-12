@@ -1,3 +1,4 @@
+import { Worn } from './Wear';
 import { memo, useEffect, useId, useState } from 'react';
 
 export type Mood =
@@ -58,6 +59,8 @@ interface Props {
   coat?: CoatName;
   /** the sushi chef's hat; the cafe cats are off duty */
   chef?: boolean;
+  /** presents he has chosen for the cat to wear — ids from game/gifts.ts */
+  wear?: readonly string[];
 }
 
 /**
@@ -91,6 +94,9 @@ export const COATS = {
 } satisfies Record<string, Coat>;
 
 export type CoatName = keyof typeof COATS;
+
+const NO_WEAR: readonly string[] = [];
+const HEAD_WEAR = new Set(['party-hat', 'crown', 'top-hat']);
 
 const INK = '#2B1F1C';
 const BLUSH = '#FF9EAA';
@@ -148,7 +154,10 @@ function CatArt({
   petting = false,
   coat: coatName = 'calico',
   chef = true,
+  wear = NO_WEAR,
 }: Props) {
+  /* a hat of his own choosing takes the place of the chef's hat */
+  const ownHat = wear.some((id) => HEAD_WEAR.has(id));
   const coat: Coat = COATS[coatName];
   const FUR = coat.fur;
   const FUR_SHADE = coat.shade;
@@ -641,7 +650,8 @@ function CatArt({
             <ellipse {...HEAD} fill="none" {...OUTLINE} />
 
             {/* a little white chef's hat, set at an angle between the ears */}
-            {chef && (
+            <Worn ids={wear} layer="hat" />
+            {chef && !ownHat && (
               <g transform="translate(0 5) rotate(-10 120 50)">
                 <path
                   d="M 102 50 C 90 48, 90 30, 102 30 C 104 18, 120 14, 126 24 C 136 16, 152 26, 142 38 C 148 44, 144 52, 138 50 Z"
@@ -701,6 +711,7 @@ function CatArt({
               <path d="M 182 110 q 10 -3 20 -4" />
               <path d="M 183 118 q 10 0 20 2" />
             </g>
+            <Worn ids={wear} layer="front" />
           </g>
 
           {/* mood extras */}

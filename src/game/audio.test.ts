@@ -275,3 +275,18 @@ describe('a context that has been put to sleep', () => {
     lastContext().state = 'running';
   });
 });
+
+describe('the redesigned prompts', () => {
+  it('meets a letter with its name, its sound, its word and the sound again', () => {
+    const clips = promptClips({ kind: 'meet', target: 'S', options: ['S'] }).filter(
+      (c) => typeof c === 'string',
+    );
+    expect(clips).toEqual(['ui/new-letter', 'letter/S', 'prompt/S', 'word/S', 'prompt/S']);
+  });
+
+  it('asks a known letter by its sound alone, twice', () => {
+    const clips = promptClips({ kind: 'sound', target: 'M', options: ['M', 'S'], bare: true });
+    expect(clips.filter((c) => typeof c === 'string')).toEqual(['prompt/M', 'prompt/M']);
+    expect(clips.some((c) => typeof c === 'string' && c.startsWith('letter/'))).toBe(false);
+  });
+});

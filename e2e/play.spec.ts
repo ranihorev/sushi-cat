@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  KNOWS_STARTERS,
   VIEWPORTS,
   blockedPoints,
   clearClips,
@@ -8,6 +9,7 @@ import {
   optionLetters,
   playedClips,
   recordClips,
+  seedProfile,
   startMeal,
 } from './helpers';
 
@@ -337,5 +339,184 @@ test.describe('kitty cafe', () => {
     await startMeal(page, 'play kitty cafe');
     await page.getByLabel('home', { exact: true }).click();
     await expect(page.getByLabel('play kitty cafe', { exact: true })).toBeVisible();
+  });
+});
+
+/** place the next missing piece of the word on the mat, by tapping it */
+async function placeNext(page: import('@playwright/test').Page) {
+  const state = await page.evaluate(() => {
+    const el = document.querySelector('[data-phase]')!;
+    const empty = [...el.querySelectorAll('[aria-label^="place"]')].findIndex((e) =>
+      e.getAttribute('aria-label')!.endsWith('empty'),
+    );
+    return { word: el.getAttribute('data-word')!.toUpperCase(), empty };
+  });
+  await expect(page.getByLabel(`letter ${state.word[state.empty]}`)).toBeEnabled({ timeout: 15_000 });
+  await page.getByLabel(`letter ${state.word[state.empty]}`).click();
+  return state;
+}
+
+test.describe('the street', () => {
+  test('keeps the roll shop shut until he knows enough letters', async ({ page }) => {
+    await page.goto('/');
+    const door = page.getByLabel('play roll words');
+    await expect(door).toHaveAttribute('data-locked', 'true');
+    await door.click();
+    // still on the title screen: nothing started
+    await expect(page.getByLabel('play', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-phase]')).toHaveCount(0);
+  });
+
+  test('opens the roll shop once the starter letters are solid', async ({ page }) => {
+    await seedProfile(page, KNOWS_STARTERS);
+    await page.goto('/');
+    await expect(page.getByLabel('play roll words')).not.toHaveAttribute('data-locked', 'true');
+  });
+
+  for (const vp of VIEWPORTS) {
+    test(`fits all four doors on a ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await seedProfile(page, { ...KNOWS_STARTERS, gifts: ['bow', 'yarn', 'crown'], wearing: { head: 'crown' } });
+      await page.goto('/');
+      // the doors pop in one after the other; measure them once they stand still
+      await page.waitForTimeout(1500);
+      for (const label of ['play', 'play sushi train', 'play kitty cafe', 'play roll words']) {
+        const box = (await page.getByLabel(label, { exact: true }).boundingBox())!;
+        expect(box.x, label).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, label).toBeLessThanOrEqual(vp.width);
+        expect(box.y, label).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height, label).toBeLessThanOrEqual(vp.height);
+        const door = await blockedPoints(page, `button[aria-label="${label}"]`);
+        expect(1 - door.blocked.length / door.sampled, `${label} reachable`).toBeGreaterThan(0.9);
+      }
+    });
+  }
+
+  test('a present on the shelf goes on the cat and comes off again', async ({ page }) => {
+    await seedProfile(page, { ...KNOWS_STARTERS, gifts: ['bow'] });
+    await page.goto('/');
+    const bow = page.getByLabel('wear bow');
+    await expect(bow).toHaveAttribute('aria-pressed', 'false');
+    await bow.click();
+    await expect(bow).toHaveAttribute('aria-pressed', 'true');
+    await bow.click();
+    await expect(bow).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+test.describe('meeting a letter', () => {
+  test('a new child is shown one piece, with its letter and picture', async ({ page }) => {
+    await startMeal(page, 'play', {});
+    expect(await optionLetters(page)).toHaveLength(1);
+    const [letter] = await optionLetters(page);
+    await expect(page.locator(`[data-hint="${letter}"] img`)).toBeVisible();
+    await expect
+      .poll(async () => (await playedClips(page)).filter((c) => c.endsWith(`/${letter}`)), { timeout: 10_000 })
+      .toEqual(expect.arrayContaining([`letter/${letter}`, `prompt/${letter}`, `word/${letter}`]));
+
+    await feed(page, letter);
+    await expect(page.getByLabel(/1 of 8 eaten/)).toBeVisible({ timeout: 10_000 });
+  });
+});
+
+test.describe('roll shop', () => {
+  for (const vp of VIEWPORTS) {
+    test(`everything fits and can be pressed on a ${vp.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await startMeal(page, 'play roll words', { ...KNOWS_STARTERS, wordLevel: 3 });
+      await expect(page.locator('[data-phase="build"]')).toBeVisible({ timeout: 15_000 });
+
+      const overflow = await page.evaluate(() => ({
+        horizontal: document.documentElement.scrollWidth - window.innerWidth,
+        vertical: document.documentElement.scrollHeight - window.innerHeight,
+      }));
+      expect(overflow.horizontal).toBeLessThanOrEqual(0);
+      expect(overflow.vertical).toBeLessThanOrEqual(0);
+
+      for (const sel of ['[data-mat]', 'button[aria-label="hear the word"]', 'button[aria-label="say it again"]']) {
+        const box = (await page.locator(sel).boundingBox())!;
+        expect(box.y, sel).toBeGreaterThanOrEqual(0);
+        expect(box.x, sel).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, sel).toBeLessThanOrEqual(vp.width + 1);
+        expect(box.y + box.height, sel).toBeLessThanOrEqual(vp.height + 1);
+      }
+      const replay = await blockedPoints(page, 'button[aria-label="say it again"]', true);
+      expect(replay.blocked).toEqual([]);
+      const letters = await optionLetters(page);
+      expect(letters).toHaveLength(4);
+      for (const letter of letters) {
+        const piece = await blockedPoints(page, `button[aria-label="letter ${letter}"]`);
+        expect(1 - piece.blocked.length / piece.sampled, `letter ${letter}`).toBeGreaterThan(0.9);
+      }
+    });
+  }
+
+  test('he builds a word, hears it sounded out, and the cat eats it', async ({ page }) => {
+    await startMeal(page, 'play roll words', { ...KNOWS_STARTERS, wordLevel: 2 });
+    await expect(page.locator('[data-phase="build"]')).toBeVisible({ timeout: 15_000 });
+    const { word } = await placeNext(page);
+    await expect(page.getByLabel(`place 1: ${word[0]}`)).toBeVisible();
+    await clearClips(page);
+    await placeNext(page);
+    await placeNext(page);
+
+    await expect(page.getByLabel(/1 of \d words/)).toBeVisible({ timeout: 20_000 });
+    const played = (await playedClips(page)).filter((c) => /^prompt\//.test(c));
+    // the last three sounds are the word, in order
+    expect(played.slice(-3)).toEqual([...word].map((l) => `prompt/${l}`));
+    expect(await playedClips(page)).toContain('cat/nom');
+  });
+
+  test('a piece carried up to the mat is placed, like a tap', async ({ page }) => {
+    await startMeal(page, 'play roll words', { ...KNOWS_STARTERS, wordLevel: 2 });
+    await expect(page.locator('[data-phase="build"]')).toBeVisible({ timeout: 15_000 });
+    const word = (await page.locator('[data-word]').getAttribute('data-word'))!.toUpperCase();
+    const piece = page.getByLabel(`letter ${word[0]}`);
+    await expect(piece).toBeEnabled();
+    const from = (await piece.boundingBox())!;
+    const mat = (await page.locator('[data-mat]').boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        from.x + from.width / 2 + ((mat.x + mat.width / 2 - from.x - from.width / 2) * i) / 5,
+        from.y + from.height / 2 + ((mat.y + mat.height / 2 - from.y - from.height / 2) * i) / 5,
+      );
+    }
+    await page.mouse.up();
+    await expect(page.getByLabel(`place 1: ${word[0]}`)).toBeVisible();
+  });
+});
+
+test.describe('presents', () => {
+  test.setTimeout(120_000);
+  test('after a meal he opens one of two boxes and the cat wears it', async ({ page }) => {
+    await startMeal(page, 'play roll words', {
+      ...KNOWS_STARTERS,
+      settings: { gateChoices: false, roundsPerMeal: 4 },
+    });
+    for (let word = 0; word < 3; word++) {
+      await expect(page.locator('[data-phase="build"]')).toBeVisible({ timeout: 20_000 });
+      while (
+        (await page.locator('[data-phase="build"]').count()) &&
+        (await page.locator('[aria-label$=": empty"]').count())
+      ) {
+        await placeNext(page);
+        await page.waitForTimeout(400);
+      }
+      await expect(page.locator('[data-phase="build"]')).toHaveCount(0);
+    }
+
+    const boxes = page.getByLabel('open a present');
+    await expect(boxes).toHaveCount(2, { timeout: 30_000 });
+    await boxes.first().click();
+    await expect(page.locator('[data-presents] [data-gift]')).toBeVisible();
+    await expect(boxes).toHaveCount(1);
+
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('sushi-cat.profile.v2')!));
+    expect(saved.gifts).toHaveLength(1);
+
+    await page.getByLabel('home').click();
+    await expect(page.locator(`[data-gift="${saved.gifts[0]}"]`).first()).toBeVisible();
   });
 });

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Confetti } from '../components/Confetti';
 import { PettableCat } from '../components/PettableCat';
+import { Picture } from '../components/Picture';
 import { Counter, Restaurant } from '../components/Restaurant';
+import { GiftIcon } from '../components/Wear';
+import { offerGifts, takeGift, wornBy } from '../game/gifts';
+import { glyphFor } from '../game/store';
 import { audio, confirmClip } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { LETTERS, TOPPING_COLORS } from '../game/letters';
@@ -14,6 +18,7 @@ interface Props {
   unlockedLetters: Letter[];
   onAgain: () => void;
   onHome: () => void;
+  onProfileChange: (updater: (p: Profile) => Profile) => void;
 }
 
 export function Rest({
@@ -23,16 +28,31 @@ export function Rest({
   unlockedLetters,
   onAgain,
   onHome,
+  onProfileChange,
 }: Props) {
   const [showReward, setShowReward] = useState(false);
+  /* Two presents, and he keeps one. Chosen once, as the screen opens: offering
+     from the live profile would deal two new boxes the moment he took one. */
+  const [offer] = useState(() => offerGifts(profile));
+  const [taken, setTaken] = useState<string | null>(null);
+
+  const take = (id: string) => {
+    if (taken) return;
+    audio.unlock();
+    setTaken(id);
+    audio.sparkle();
+    audio.fanfare();
+    onProfileChange((p) => takeGift(p, id));
+  };
 
   useEffect(() => {
     const t = setTimeout(() => {
       setShowReward(true);
       if (newDecoration || unlockedLetters.length) audio.sparkle();
+      if (offer.length) void audio.oneShot('ui/pick-present');
     }, 900);
     return () => clearTimeout(t);
-  }, [newDecoration, unlockedLetters.length]);
+  }, [newDecoration, unlockedLetters.length, offer.length]);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
@@ -40,11 +60,12 @@ export function Rest({
       <div className="relative min-h-0 flex-1">
         <Restaurant unlocked={profile.decorations} spotlight={showReward ? newDecoration : null} />
 
-        <div className="relative z-10 flex h-full flex-col items-center justify-center gap-3 px-4 pb-[clamp(50px,8vh,90px)]">
+        <div className="relative z-10 flex h-full flex-col items-center justify-center gap-[clamp(4px,1.4vh,12px)] px-4 pb-[clamp(20px,5vh,70px)]">
           <PettableCat
             fullness={1}
-            mood="asleep"
-            className="h-[clamp(150px,28vh,290px)] w-[clamp(190px,34vh,350px)]"
+            mood={taken ? 'happy' : 'asleep'}
+            wear={wornBy(profile)}
+            className="min-h-0 h-[clamp(100px,22vh,240px)] w-[clamp(126px,27vh,290px)] shrink"
           />
 
         {/* What he ate — and every tile says itself back when he presses it.
@@ -71,7 +92,7 @@ export function Rest({
                 transition: 'transform 120ms ease',
               }}
             >
-              {l}
+              {glyphFor(profile, l)}
             </button>
           ))}
         </div>
@@ -79,11 +100,50 @@ export function Rest({
         {showReward && unlockedLetters.length > 0 && (
           <div className="cat-pop flex items-center gap-2 rounded-2xl bg-black/35 px-5 py-3">
             <span className="text-2xl">✨</span>
+            {/* new letters for next time — each says its name and sound */}
             {unlockedLetters.map((l) => (
-              <span key={l} className="text-3xl font-extrabold text-tamago">
+              <button
+                key={l}
+                type="button"
+                aria-label={`new letter ${l}`}
+                onPointerDown={() => {
+                  audio.unlock();
+                  void audio.speak([`letter/${l}`, 380, `prompt/${l}`]);
+                }}
+                className="border-0 bg-transparent p-0 text-3xl font-extrabold text-tamago active:scale-90"
+              >
                 {l}
-              </span>
+              </button>
             ))}
+          </div>
+        )}
+
+        {/* The present. Both boxes are wrapped, so the choice is a surprise
+            and neither is the wrong one. The one he opens goes straight onto
+            the cat (or onto the counter of the title screen, for a toy). */}
+        {showReward && offer.length > 0 && (
+          <div className="flex items-center justify-center gap-[clamp(14px,4vw,40px)]" data-presents>
+            {offer.map((g) =>
+              taken === g.id ? (
+                <span
+                  key={g.id}
+                  className="gift-open grid place-items-center rounded-3xl bg-rice/95 p-3 shadow-[0_6px_0_rgba(0,0,0,0.22)]"
+                  style={{ width: 'clamp(84px, 19vmin, 150px)', aspectRatio: '1' }}
+                >
+                  <GiftIcon id={g.id} className="h-full w-full overflow-visible" />
+                </span>
+              ) : (
+                <button
+                  key={g.id}
+                  type="button"
+                  aria-label="open a present"
+                  onPointerDown={() => take(g.id)}
+                  className={`gift-box ${taken ? 'gift-away' : ''}`}
+                >
+                  <Picture name="gift" className="h-full w-full drop-shadow-[0_6px_0_rgba(0,0,0,0.22)]" />
+                </button>
+              ),
+            )}
           </div>
         )}
 

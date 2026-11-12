@@ -14,6 +14,8 @@ export type PieceState =
 
 interface Props {
   letter: Letter;
+  /** what is written on it: "M", "Mm" or "m" — the letter itself by default */
+  glyph?: string;
   state: PieceState;
   index: number;
   disabled?: boolean;
@@ -161,7 +163,9 @@ function AliveFace({ over }: { over: boolean }) {
   );
 }
 
-function SushiPiece({ letter, state, index, disabled, drag, over, alive, golden, onGrab }: Props) {
+function SushiPiece({ letter, glyph = letter, state, index, disabled, drag, over, alive, golden, onGrab }: Props) {
+  /* two letters side by side need a wider band and a smaller hand */
+  const pair = glyph.length > 1;
   const cls =
     state === 'swallow' ? 'sushi-swallow'
     : state === 'sniff' ? 'sushi-sniff'
@@ -227,18 +231,18 @@ function SushiPiece({ letter, state, index, disabled, drag, over, alive, golden,
           </g>
 
           {/* nori band carrying the letter */}
-          <rect x="47" y="46" width="38" height="62" rx="6" fill={NORI} />
-          <rect x="47" y="46" width="38" height="62" rx="6" fill="url(#noriSheen)" />
+          <rect x={pair ? 38 : 47} y="46" width={pair ? 56 : 38} height="62" rx="6" fill={NORI} />
+          <rect x={pair ? 38 : 47} y="46" width={pair ? 56 : 38} height="62" rx="6" fill="url(#noriSheen)" />
           <text
             x="66"
             y="90"
             textAnchor="middle"
             fill={golden ? '#FFE9A8' : '#FFFBF2'}
-            fontSize="38"
+            fontSize={pair ? 29 : 38}
             fontWeight="800"
             className="sushi-letter"
           >
-            {letter}
+            {glyph}
           </text>
 
           {alive && <AliveFace over={!!over} />}
