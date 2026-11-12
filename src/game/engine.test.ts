@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOptions, demote, nextRound, optionCountFor, promote } from './engine';
+import { buildOptions, demote, nextRound, optionCountFor, pickTarget, promote } from './engine';
 import type { Letter } from './letters';
 import { BATCHES, LETTERS, STARTER_SET, looksAlike, soundsAlike } from './letters';
 import { WINDOW, blankProfile, recordAnswer, recordConfusion, unlockAllLetters } from './store';
@@ -189,5 +189,22 @@ describe('kind of question', () => {
     let sound = 0;
     for (let i = 0; i < 600; i++) if (nextRound(p, 1, []).kind === 'sound') sound++;
     expect(sound / 600).toBeGreaterThan(0.5);
+  });
+});
+
+describe('review of letters he has not seen for a while', () => {
+  it('brings a known letter back more often after many meals away', () => {
+    let p = blankProfile();
+    p = { ...p, activeSet: ['S', 'M', 'T'] };
+    for (const l of p.activeSet) for (let i = 0; i < WINDOW; i++) p = recordAnswer(p, l, true);
+    // S was last seen at meal 0; M and T are seen again at meal 12
+    p = { ...p, mealsCompleted: 12 };
+    for (const l of ['M', 'T'] as const) p = recordAnswer(p, l, true);
+
+    let s = 0;
+    const n = 3000;
+    for (let i = 0; i < n; i++) if (pickTarget(p, []) === 'S') s++;
+    // equal weights would give a third; stale S weighs 4 against 1 and 1
+    expect(s / n).toBeGreaterThan(0.55);
   });
 });

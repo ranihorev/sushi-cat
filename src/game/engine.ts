@@ -30,13 +30,28 @@ function weightedPick<T>(items: T[], weight: (t: T) => number): T {
 /**
  * How badly this letter needs practice right now: one point, plus two for every
  * recent miss. A letter he has never missed scores 1, one he gets wrong every
- * time scores 9, and one he has never seen scores 4 — shakier than a letter he
+ * time scores 9 (more if it is also stale), and one he has never seen scores 4 — shakier than a letter he
  * fumbles occasionally, safer than one he cannot do at all.
  */
 function needScore(p: Profile, l: Letter): number {
-  const { recent } = statFor(p, l);
+  const { recent, lastSeenAt } = statFor(p, l);
   if (!recent.length) return 4; // never seen — introduce it
-  return 1 + recent.filter((ok) => !ok).length * 2;
+  return 1 + recent.filter((ok) => !ok).length * 2 + staleness(p, lastSeenAt);
+}
+
+/** a letter starts to count as stale after this many meals without it */
+const STALE_AFTER_MEALS = 3;
+/** and staleness never outweighs one real miss and a half */
+const MAX_STALE = 3;
+
+/**
+ * A point for every few meals since he last saw the letter. Without this a
+ * letter he once knew scores 1 for good, and as the set grows it can go weeks
+ * unseen — which is how a known letter gets forgotten.
+ */
+function staleness(p: Profile, lastSeenAt: number): number {
+  const away = p.mealsCompleted - lastSeenAt;
+  return Math.min(MAX_STALE, Math.max(0, Math.floor(away / STALE_AFTER_MEALS)));
 }
 
 /**

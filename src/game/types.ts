@@ -28,6 +28,12 @@ export interface LetterStat {
    * "three of his last four" is a rule a parent can check by watching.
    */
   recent: boolean[];
+  /**
+   * Parallel to `recent`: true where that showing had only two choices. A coin
+   * toss gets a two-choice round right half the time, so those showings have to
+   * be perfect before the letter counts as known. Missing on older profiles.
+   */
+  easy?: boolean[];
   /** meal index when last shown */
   lastSeenAt: number;
 }

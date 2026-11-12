@@ -192,12 +192,14 @@ round. Only first-try answers count as correct — getting there after two misse
 is not mastery.
 
 **Letters.** Starts with `S M T A P C`. A new batch of 2–3 unlocks only when
-every letter in the active set is solid (seen 4+ times, recall reliable).
+most of the active set is solid: right 3 of the last 4 times, or 4 of 4 if any
+of those rounds had only two choices, because guesses pass two-choice rounds.
 Add his own name's letters in the parent screen — personal relevance beats
 optimal ordering at this age.
 
 **Adaptation.** Each letter carries a recency-weighted mastery score. Round
-generation is weighted toward weak and stale letters, not uniform random. Wrong
+generation is weighted toward weak and stale letters, not uniform random. A
+letter gains weight for every three meals he has not seen it. Wrong
 taps are recorded as confusion pairs (`P → B`), and at level 3 those exact
 letters are preferred as distractors — practice lands where the errors are.
 

@@ -396,7 +396,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
         REACTION_SOUND[rx]();
 
         setEaten(nextEaten);
-        onProfileChange((p) => recordAnswer(p, round.target, first));
+        onProfileChange((p) => recordAnswer(p, round.target, first, round.options.length));
         setStreak(nextStreak);
         if (nextLevel !== level) {
           setLevel(nextLevel);

@@ -337,7 +337,7 @@ export function Cafe({ profile, onProfileChange, onMealComplete, onExit }: Props
         doneRef.current = done;
         after(420, () => setFriends(done));
 
-        onProfileChange((p) => recordAnswer(p, r.target, first));
+        onProfileChange((p) => recordAnswer(p, r.target, first, r.options.length));
         if (nextLevel !== levelRef.current) {
           levelRef.current = nextLevel;
           setLevel(nextLevel);
