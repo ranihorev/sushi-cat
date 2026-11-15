@@ -17,7 +17,8 @@ import {
 } from '../game/audio';
 import { demote, nextRound, optionCountFor, promote } from '../game/engine';
 import type { Letter } from '../game/letters';
-import { REACTION_SOUND } from '../game/reactionSounds';
+import { GAG_SOUND, REACTION_SOUND } from '../game/reactionSounds';
+import { GAG_MS, MEAL_GAGS, TAP_COOLDOWN_MS, TAP_GAGS, surprises, type Gag } from '../game/surprises';
 import { glyphFor, markMet, recordAnswer, recordConfusion } from '../game/store';
 import { wornBy } from '../game/gifts';
 import type { GameMode, Level, Profile, Round } from '../game/types';
@@ -128,6 +129,9 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
   const [given, setGiven] = useState<Letter | null>(null);
   /** a decoration that has just landed mid-meal, for the gold piece */
   const [spotlight, setSpotlight] = useState<string | null>(null);
+  /** a joke in progress — see game/surprises.ts */
+  const [gag, setGag] = useState<Gag | null>(null);
+  const gagUntil = useRef(0);
 
   const catRef = useRef<HTMLDivElement>(null);
   const pieceRefs = useRef(new Map<Letter, HTMLDivElement>());
@@ -274,6 +278,7 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
       setLocked(true);
       setGated(profile.settings.gateChoices);
       setReaction(null);
+      setGag(null);
       /* Read through the ref, not a counter: StrictMode opens the first round
          twice, and anything that counted its own calls would be a round out in
          development and correct in production. */
@@ -330,6 +335,22 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
     return x > c.left - 110 && x < c.right + 110 && y > c.top - 160 && y < c.bottom + 40;
   };
 
+  /* Tap the cat and he does something silly: a burp, a wiggle or a yawn. Only
+     while he is waiting for an answer — never in the middle of eating or
+     refusing — and not again until the last one has finished, so it cannot be
+     hammered into noise. */
+  const tapCat = () => {
+    if (locked || gated || drag || answered.current) return;
+    if (profileRef.current.settings.surprises === false) return;
+    if (Date.now() < gagUntil.current + 400) return;
+    audio.unlock();
+    const g = surprises.deal(TAP_GAGS);
+    setGag(g);
+    gagUntil.current = Date.now() + TAP_COOLDOWN_MS;
+    GAG_SOUND[g]();
+    after(GAG_MS[g], () => setGag((cur) => (cur === g ? null : cur)));
+  };
+
   const handlePick = (letter: Letter, drop: { dx: number; dy: number }) => {
     if (locked || gated) return;
     audio.unlock();
@@ -378,10 +399,22 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
            are dealt from a shuffled pack, so the reward for a right answer is
            something he has to watch to find out — which is the whole reason the
            game had gone flat. */
-        const rx = dealReaction();
-        setReaction(rx);
+        /* Now and then, instead, a joke: about one right answer in six, never
+           on a letter he is only meeting, and never two close together. */
+        const joke =
+          !meet && profileRef.current.settings.surprises !== false && surprises.tick()
+            ? surprises.deal(MEAL_GAGS)
+            : null;
+        if (joke) {
+          setGag(joke);
+          gagUntil.current = Date.now() + GAG_MS[joke];
+          GAG_SOUND[joke]();
+        } else {
+          const rx = dealReaction();
+          setReaction(rx);
+          REACTION_SOUND[rx]();
+        }
         setMood('happy');
-        REACTION_SOUND[rx]();
 
         setEaten(nextEaten);
         onProfileChange((p) =>
@@ -424,7 +457,12 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
            now and then a word for it. The praise is fired rather than awaited:
            queued in this chain it added most of a second to every third round
            and taught nothing that the meow had not already said. */
-        if (Math.random() < 0.35) void audio.oneShot(randomPraise());
+        if (joke) {
+          // the joke is the reply this time; let it play out before the meow
+          await new Promise<void>((r) => after(GAG_MS[joke], r));
+          if (!alive.current) return;
+          setGag(null);
+        } else if (Math.random() < 0.35) void audio.oneShot(randomPraise());
         await audio.speak([catSound(nextStreak >= FEVER_AT ? 'excited' : 'happy')]);
         if (!alive.current) return;
 
@@ -740,7 +778,20 @@ export function Play({ profile, mode = 'counter', onProfileChange, onMealComplet
             ref={catRef}
             className="relative h-[clamp(170px,34vh,360px)] w-[clamp(210px,40vh,420px)] shrink"
           >
-            <Cat fullness={fullness} mood={mood} look={look} reaction={reaction} wear={wear} />
+            <div
+              className="pointer-events-auto absolute inset-0"
+              data-testid="the-cat"
+              onPointerDown={tapCat}
+            >
+              <Cat
+                fullness={fullness}
+                mood={mood}
+                look={look}
+                reaction={reaction}
+                wear={wear}
+                gag={gag}
+              />
+            </div>
             {hint && (
               <HintBubble
                 key={`${hint.letter}-${hint.glyph ?? ''}`}

@@ -5,6 +5,7 @@ import { CAT_CLIPS } from '../game/audio';
 import type { Letter } from '../game/letters';
 import { ALL_LETTERS } from '../game/letters';
 import { blankProfile } from '../game/store';
+import { MEAL_GAGS, TAP_GAGS, surprises } from '../game/surprises';
 import type { Profile } from '../game/types';
 import { CLIP_MS, clipDurations, contextLock, cutLog, lastContext, playLog } from '../test/audio-stub';
 import { Play } from './Play';
@@ -799,5 +800,58 @@ describe('the picture beside the cat', () => {
   it('never writes the word out, which would give the first letter away', async () => {
     await start();
     expect(document.querySelector('[data-hint]')?.textContent ?? '').toBe('');
+  });
+});
+
+describe('the jokes', () => {
+  const gagShowing = () => document.querySelector('svg[data-gag]')?.getAttribute('data-gag') ?? null;
+
+  /* A joke after every answer would be the thing between him and the next
+     question. One in five to eight keeps it a surprise. */
+  it('comes once in a meal of eight, no sooner than the fifth answer', async () => {
+    surprises.reset();
+    await start();
+    const jokes: { at: number; gag: string }[] = [];
+    for (let i = 1; i <= 8; i++) {
+      dragTo(targetOnScreen(), ON_CAT);
+      await tick(900);
+      const g = gagShowing();
+      if (g) jokes.push({ at: i, gag: g });
+      await settleRound();
+    }
+    expect(jokes).toHaveLength(1);
+    expect(jokes[0].at).toBeGreaterThanOrEqual(5);
+    expect(MEAL_GAGS as readonly string[]).toContain(jokes[0].gag);
+    expect(mealResult).toHaveLength(8);
+  });
+
+  it('can be turned off by a parent', async () => {
+    surprises.reset();
+    await start({ settings: { ...blankProfile().settings, surprises: false } });
+    for (let i = 0; i < 8; i++) {
+      dragTo(targetOnScreen(), ON_CAT);
+      await tick(900);
+      expect(gagShowing()).toBeNull();
+      await settleRound();
+    }
+  });
+
+  it('makes the cat do something silly when he taps it, and it is not an answer', async () => {
+    surprises.reset();
+    await start();
+    fireEvent.pointerDown(screen.getByTestId('the-cat'));
+    expect(TAP_GAGS as readonly string[]).toContain(gagShowing());
+    expect(profileSeen.letterStats).toEqual({});
+    await tick(2000);
+    expect(gagShowing()).toBeNull();
+  });
+
+  it('does nothing when the cat is tapped while he is eating', async () => {
+    surprises.reset();
+    await start();
+    dragTo(targetOnScreen(), ON_CAT);
+    await tick(100);
+    fireEvent.pointerDown(screen.getByTestId('the-cat'));
+    expect(gagShowing()).toBeNull();
   });
 });

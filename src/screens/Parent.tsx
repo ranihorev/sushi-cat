@@ -203,6 +203,29 @@ export function Parent({ profile, onProfileChange, onClose }: Props) {
 
             <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
               <span className="text-sm">
+                <span className="font-bold">Funny surprises</span>
+                <br />
+                <span className="text-xs text-white/40">
+                  Now and then (about one right answer in six) the cat sneezes, eats wasabi or falls
+                  over. Turn off if it takes his mind off the letters.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                aria-label="Funny surprises"
+                checked={profile.settings.surprises !== false}
+                onChange={(e) =>
+                  onProfileChange((p) => ({
+                    ...p,
+                    settings: { ...p.settings, surprises: e.target.checked },
+                  }))
+                }
+                className="h-6 w-6 shrink-0 accent-tamago"
+              />
+            </label>
+
+            <label className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2.5">
+              <span className="text-sm">
                 <span className="font-bold">Small letters</span>
                 <br />
                 <span className="text-xs text-white/40">

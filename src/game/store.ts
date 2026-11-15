@@ -23,7 +23,7 @@ export function blankProfile(): Profile {
     wordLevel: 1,
     gifts: [],
     wearing: {},
-    settings: { gateChoices: false, roundsPerMeal: 8, letterCase: 'pair', wordsAlwaysOpen: false },
+    settings: { gateChoices: false, roundsPerMeal: 8, letterCase: 'pair', wordsAlwaysOpen: false, surprises: true },
   };
 }
 

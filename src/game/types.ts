@@ -86,6 +86,8 @@ export interface Settings {
   letterCase: LetterCase;
   /** open the roll shop whatever he knows — for a parent who wants to try it */
   wordsAlwaysOpen: boolean;
+  /** the rare jokes: the big sneeze, the wasabi, the splat, a guest at a door */
+  surprises: boolean;
 }
 
 export interface Round {

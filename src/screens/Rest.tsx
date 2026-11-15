@@ -65,6 +65,7 @@ export function Rest({
             fullness={1}
             mood={taken ? 'happy' : 'asleep'}
             wear={wornBy(profile)}
+            jokes={profile.settings.surprises !== false}
             className="min-h-0 h-[clamp(100px,22vh,240px)] w-[clamp(126px,27vh,290px)] shrink"
           />
 
