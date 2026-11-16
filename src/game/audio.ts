@@ -372,6 +372,85 @@ class AudioEngine {
   }
 
   /** the gold piece, arriving */
+  /* ------------------------------ the jokes ------------------------------
+     Bigger than the reactions, and only ever heard about once in six right
+     answers (see game/surprises.ts). All made here, so they cost no recording. */
+
+  /** one pitch gliding to another — the basis of every cartoon noise */
+  private sweep(from: number, to: number, dur: number, type: OscillatorType = 'sine', vol = 0.12, at = 0) {
+    const c = this.ac();
+    if (!c || !this.master) return;
+    const t = c.currentTime + at;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, t);
+    osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.setValueAtTime(vol, t + dur * 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(this.master);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+
+  /** "ah... ah... ACHOO!" — two rising breaths in, then the blast */
+  achoo() {
+    this.sweep(260, 420, 0.28, 'triangle', 0.07);
+    this.sweep(300, 560, 0.3, 'triangle', 0.08, 0.36);
+    this.noise(0.42, 0.26, 0.72, 2200, 0.5);
+    this.sweep(520, 160, 0.3, 'sawtooth', 0.08, 0.72);
+    // and the piece of sushi whistling away across the room
+    this.sweep(1400, 500, 0.7, 'sine', 0.06, 0.82);
+  }
+
+  /** wasabi: a kettle coming to the boil, then steam out of both ears */
+  kettle() {
+    this.sweep(700, 2300, 0.9, 'sine', 0.05, 0.15);
+    this.sweep(710, 2340, 0.9, 'sine', 0.03, 0.15);
+    this.noise(1.1, 0.07, 0.5, 5200, 0.7);
+    this.noise(0.6, 0.05, 1.2, 4200, 0.7);
+  }
+
+  /** the fall: a slide down, and a wet flop on the floor */
+  splat() {
+    this.sweep(900, 140, 0.45, 'triangle', 0.09);
+    this.blip(70, 0.22, 'sine', 0.3, 0.46);
+    this.noise(0.26, 0.2, 0.46, 700, 0.6);
+    this.noise(0.12, 0.08, 0.6, 2400, 1.5);
+  }
+
+  /** the long, low, rumbling one he asks for again */
+  bigBurp() {
+    for (let i = 0; i < 12; i++) {
+      this.blip(62 + (i % 3) * 18 - i * 1.5, 0.08, 'sawtooth', 0.13, i * 0.06);
+    }
+    this.noise(0.6, 0.05, 0, 240, 1.2);
+  }
+
+  /** boing, boing, boing — the wiggle dance */
+  wiggle() {
+    [0, 0.2, 0.4, 0.6].forEach((at, i) => this.sweep(i % 2 ? 330 : 260, i % 2 ? 620 : 520, 0.16, 'triangle', 0.08, at));
+  }
+
+  /** a slide whistle up: someone has popped out of a door */
+  peek() {
+    this.sweep(400, 1300, 0.35, 'sine', 0.09);
+    this.blip(1568, 0.12, 'triangle', 0.06, 0.4);
+  }
+
+  /** a little tune for the octopus to dance to */
+  octoDance() {
+    [392, 523, 392, 659, 587, 523].forEach((f, i) => this.blip(f, 0.14, 'triangle', 0.08, i * 0.16));
+  }
+
+  /** the fish's sunglasses catching the light */
+  cool() {
+    this.sweep(600, 1800, 0.18, 'sine', 0.06);
+    [2093, 2637, 3136].forEach((f, i) => this.blip(f, 0.2, 'sine', 0.04, 0.2 + i * 0.07));
+  }
+
   shimmer() {
     for (let i = 0; i < 7; i++) this.blip(880 + i * 260, 0.3, 'sine', 0.05, i * 0.055);
   }
@@ -469,7 +548,14 @@ export const UI_CLIPS: Clip[] = [
 /* Lines recorded for the redesign. The game is complete without them: a clip
    that is not on disk yet is skipped (or, for a word, said by the tablet's own
    voice), so these are loaded when they exist and never required. */
-export const OPTIONAL_CLIPS: Clip[] = ['ui/new-letter', 'ui/make-word', 'ui/made-word', 'ui/pick-present'];
+export const OPTIONAL_CLIPS: Clip[] = [
+  'ui/new-letter',
+  'ui/make-word',
+  'ui/made-word',
+  'ui/pick-present',
+  /* the one recorded joke line: the cat's silly word before he falls over */
+  'fun/splat',
+];
 
 /**
  * Say one whole word and wait for it. A recorded clip when there is one; the

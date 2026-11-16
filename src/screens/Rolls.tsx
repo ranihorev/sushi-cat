@@ -10,7 +10,8 @@ import { demote, promote } from '../game/engine';
 import { wornBy } from '../game/gifts';
 import type { Letter } from '../game/letters';
 import { LETTERS, TOPPING_COLORS } from '../game/letters';
-import { REACTION_SOUND } from '../game/reactionSounds';
+import { GAG_SOUND, REACTION_SOUND } from '../game/reactionSounds';
+import { GAG_MS, TAP_COOLDOWN_MS, TAP_GAGS, surprises, type Gag } from '../game/surprises';
 import { glyphFor, recordAnswer, recordConfusion } from '../game/store';
 import type { Level, Profile } from '../game/types';
 import { distractorsFor, pickWord, type RollWord } from '../game/words';
@@ -48,6 +49,10 @@ interface Props {
    other. */
 
 const LEAD_MS = 450;
+/* The joke that belongs to this shop is the silly word: he says the word he
+   was given, then "SPLAT!", and falls over. It comes up twice as often here
+   as the sneeze or the wasabi. */
+const ROLL_GAGS: readonly Gag[] = ['splat', 'achoo', 'splat', 'wasabi'];
 const IDLE_NUDGE_MS = 8000;
 const HOLD_WAKE_MS = 350;
 const PIECE_VOICE_MS = 1500;
@@ -147,6 +152,8 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
 
   const [mood, setMood] = useState<Mood>('idle');
   const [reaction, setReaction] = useState<Reaction | null>(null);
+  const [gag, setGag] = useState<Gag | null>(null);
+  const gagUntil = useRef(0);
   const [pieceState, setPieceState] = useState<Partial<Record<Letter, PieceState>>>({});
   const [awake, setAwake] = useState<Letter | null>(null);
   /** the place that is lit while the finished word is sounded out */
@@ -231,6 +238,7 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
       setFly(null);
       setMood('idle');
       setReaction(null);
+      setGag(null);
       draw();
 
       await sleep(LEAD_MS);
@@ -343,10 +351,29 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
     await audio.speak(['cat/nom']);
     if (!live(id)) return;
 
-    const rx = dealReaction();
-    setReaction(rx);
-    setMood('happy');
-    REACTION_SOUND[rx]();
+    const joke =
+      profileRef.current.settings.surprises !== false && surprises.tick()
+        ? surprises.deal(ROLL_GAGS)
+        : null;
+    if (joke) {
+      setMood('happy');
+      // "cat ... SPLAT!" — the word he made, then the silly one
+      if (joke === 'splat') {
+        await sayWord(word.clip, word.word);
+        if (!live(id)) return;
+      }
+      setGag(joke);
+      gagUntil.current = Date.now() + GAG_MS[joke];
+      GAG_SOUND[joke]();
+      await sleep(GAG_MS[joke]);
+      if (!live(id)) return;
+      setGag(null);
+    } else {
+      const rx = dealReaction();
+      setReaction(rx);
+      setMood('happy');
+      REACTION_SOUND[rx]();
+    }
     s.done = [...s.done, word];
 
     /* Two words in a row with no wrong piece and he builds more of the next
@@ -366,7 +393,7 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
     }
     draw();
 
-    void audio.oneShot('ui/made-word');
+    if (!joke) void audio.oneShot('ui/made-word');
     await audio.speak([catSound(clean ? 'excited' : 'happy')]);
     if (!live(id)) return;
 
@@ -380,6 +407,19 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
     await sleep(600);
     if (!live(id)) return;
     void startWord(makeTask(profileRef.current, s.level, s.recent), false);
+  };
+
+  /** tap the cat: a burp, a wiggle or a yawn, while he is building */
+  const tapCat = () => {
+    if (s.phase !== 'build' || s.busy || drag) return;
+    if (profileRef.current.settings.surprises === false) return;
+    if (Date.now() < gagUntil.current + 400) return;
+    audio.unlock();
+    const g = surprises.deal(TAP_GAGS);
+    setGag(g);
+    gagUntil.current = Date.now() + TAP_COOLDOWN_MS;
+    GAG_SOUND[g]();
+    timers.current.push(window.setTimeout(() => setGag((c) => (c === g ? null : c)), GAG_MS[g]));
   };
 
   /* -------- he offers a piece for the place that is lit -------- */
@@ -524,7 +564,13 @@ export function Rolls({ profile, onProfileChange, onMealComplete, onExit }: Prop
             ref={catRef}
             className="relative h-[clamp(110px,25vh,270px)] w-[clamp(138px,30vh,320px)] shrink"
           >
-            <Cat fullness={fullness} mood={mood} reaction={reaction} wear={wear} />
+            <div
+              className="pointer-events-auto absolute inset-0"
+              data-testid="the-cat"
+              onPointerDown={tapCat}
+            >
+              <Cat fullness={fullness} mood={mood} reaction={reaction} wear={wear} gag={gag} />
+            </div>
             {/* what he ordered — press it to hear the word again */}
             <button
               type="button"

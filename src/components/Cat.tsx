@@ -1,5 +1,6 @@
 import { Worn } from './Wear';
 import { memo, useEffect, useId, useState } from 'react';
+import type { Gag } from '../game/surprises';
 
 export type Mood =
   | 'idle'
@@ -61,6 +62,8 @@ interface Props {
   chef?: boolean;
   /** presents he has chosen for the cat to wear — ids from game/gifts.ts */
   wear?: readonly string[];
+  /** a joke in progress — see game/surprises.ts. It wins over the mood. */
+  gag?: Gag | null;
 }
 
 /**
@@ -155,6 +158,7 @@ function CatArt({
   coat: coatName = 'calico',
   chef = true,
   wear = NO_WEAR,
+  gag = null,
 }: Props) {
   /* a hat of his own choosing takes the place of the chef's hat */
   const ownHat = wear.some((id) => HEAD_WEAR.has(id));
@@ -171,10 +175,13 @@ function CatArt({
   const [fidget, setFidget] = useState<'none' | 'ear' | 'tail'>('none');
   const [chewing, setChewing] = useState(false);
 
-  const restful = (mood === 'idle' || mood === 'anticipate') && !petting;
+  const restful = (mood === 'idle' || mood === 'anticipate') && !petting && !gag;
 
   /** the reaction only exists in the pleased beat right after he swallows */
-  const rx: Reaction | null = mood === 'happy' ? reaction : null;
+  /* Two of the tap jokes are bigger versions of reactions he already knows;
+     the rest of the jokes put the reactions aside while they run. */
+  const tapRx: Reaction | null = gag === 'burp' ? 'burp' : gag === 'wiggle' ? 'dance' : null;
+  const rx: Reaction | null = tapRx ?? (gag ? null : mood === 'happy' ? reaction : null);
 
   // blink on a human-ish irregular rhythm, sometimes twice
   useEffect(() => {
@@ -256,14 +263,34 @@ function CatArt({
 
   /* Some reactions need the eyes open, and a few replace them altogether. */
   const eyesWide =
-    rx === 'hiccup' || rx === 'sneeze' || rx === 'huge' || rx === 'balloon' || rx === 'spicy';
-  const eyesDrawn = rx === 'hearts' || rx === 'stars' || rx === 'dizzy';
+    rx === 'hiccup' ||
+    rx === 'sneeze' ||
+    rx === 'huge' ||
+    rx === 'balloon' ||
+    rx === 'spicy' ||
+    gag === 'wasabi';
+  const eyesDrawn = rx === 'hearts' || rx === 'stars' || rx === 'dizzy' || gag === 'splat';
   const eyesClosed =
     !eyesWide &&
     !eyesDrawn &&
-    (asleep || petting || happy || yuck || (eating && chewing) || blinking);
+    (asleep ||
+      petting ||
+      happy ||
+      yuck ||
+      (eating && chewing) ||
+      blinking ||
+      gag === 'achoo' ||
+      gag === 'yawn');
 
   const Eye = ({ cx }: { cx: number }) => {
+    if (gag === 'splat') {
+      // flat out on the floor: little crosses for eyes, the cartoon way
+      return (
+        <g stroke={INK} strokeWidth="4" strokeLinecap="round">
+          <path d={`M ${cx - 8} ${EY - 8} l 16 16 M ${cx + 8} ${EY - 8} l -16 16`} />
+        </g>
+      );
+    }
     if (rx === 'hearts') {
       return (
         <path
@@ -376,22 +403,50 @@ function CatArt({
     </g>
   );
 
-  const rxMouth =
-    rx === 'hiccup' ? gape(9)
-    : rx === 'burp' ? gape(19)
-    : rx === 'sneeze' ? gape(21)
-    : rx === 'stars' || rx === 'dance' || rx === 'huge' ? grin
-    : rx === 'spicy' ? (
+  const spicyMouth = (
+    <g>
+      <path d="M 102 120 q 18 20 36 0 q -4 20 -18 20 q -14 0 -18 -20 Z" fill="#7A2E33" />
+      <path
+        d="M 112 134 q 8 -4 16 0 q 2 20 -8 22 q -10 -2 -8 -22 Z"
+        fill="#F4837E"
+        stroke="#D9605C"
+        strokeWidth="1.4"
+      />
+    </g>
+  );
+
+  const gagMouth =
+    gag === 'achoo' ? (
+      <g className="gag-achoo-mouth" style={{ transformOrigin: '120px 126px' }}>
+        {gape(21)}
+      </g>
+    )
+    : gag === 'wasabi' ? spicyMouth
+    : gag === 'splat' ? (
         <g>
-          <path d="M 102 120 q 18 20 36 0 q -4 20 -18 20 q -14 0 -18 -20 Z" fill="#7A2E33" />
+          <path d="M 108 124 q 12 8 24 0" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
           <path
-            d="M 112 134 q 8 -4 16 0 q 2 20 -8 22 q -10 -2 -8 -22 Z"
+            d="M 116 127 q 6 -2 12 0 q 1 14 -6 15 q -7 -1 -6 -15 Z"
             fill="#F4837E"
             stroke="#D9605C"
             strokeWidth="1.4"
           />
         </g>
       )
+    : gag === 'yawn' ? (
+        <g className="gag-yawn-mouth" style={{ transformOrigin: '120px 120px' }}>
+          <ellipse cx="120" cy="134" rx="15" ry="22" fill="#7A2E33" />
+          <ellipse cx="120" cy="147" rx="9" ry="6" fill="#F4837E" />
+        </g>
+      )
+    : null;
+
+  const rxMouth =
+    rx === 'hiccup' ? gape(9)
+    : rx === 'burp' ? gape(19)
+    : rx === 'sneeze' ? gape(21)
+    : rx === 'stars' || rx === 'dance' || rx === 'huge' ? grin
+    : rx === 'spicy' ? spicyMouth
     : rx === 'lick' ? (
         <g>
           <path d="M 108 122 q 12 12 24 0" stroke={INK} strokeWidth="3.2" fill="none" strokeLinecap="round" />
@@ -422,7 +477,7 @@ function CatArt({
     : rx === 'hearts' || rx === 'float' ? smile
     : null;
 
-  const mouth = rxMouth ?? (eating ? (
+  const mouth = gagMouth ?? rxMouth ?? (eating ? (
     <g className={chewing ? 'cat-chew' : undefined} style={{ transformOrigin: '120px 130px' }}>
       <ellipse cx="120" cy="132" rx={chewing ? 10 : 15} ry={chewing ? 8 : 13} fill="#7A2E33" />
       <ellipse cx="120" cy={chewing ? 136 : 139} rx={chewing ? 6 : 9} ry={4.5} fill="#F4837E" />
@@ -483,7 +538,18 @@ function CatArt({
     float: 'cat-float',
   };
 
-  const bodyClass = rx
+  const GAG_BODY: Record<Gag, string> = {
+    achoo: 'gag-achoo',
+    wasabi: 'gag-wasabi',
+    splat: 'gag-splat',
+    burp: 'cat-bounce',
+    wiggle: 'gag-wiggle',
+    yawn: 'gag-yawn',
+  };
+
+  const bodyClass = gag
+    ? GAG_BODY[gag]
+    : rx
     ? RX_BODY[rx]
     : petting
       ? 'cat-nuzzle'
@@ -507,6 +573,7 @@ function CatArt({
       viewBox="0 0 240 210"
       className="h-full w-full overflow-visible"
       data-reaction={rx ?? undefined}
+      data-gag={gag ?? undefined}
     >
       <defs>
         <radialGradient id={id('fur')} cx="42%" cy="30%" r="78%">
@@ -646,6 +713,12 @@ function CatArt({
                 </g>
               )}
             </g>
+            {/* wasabi: the whole face goes red, from the chin up */}
+            {gag === 'wasabi' && (
+              <g clipPath={url('head')}>
+                <rect className="gag-redface" x="40" y="40" width="160" height="120" fill="#FF4A3D" />
+              </g>
+            )}
             {/* drawn over the patches, so they sit inside the outline */}
             <ellipse {...HEAD} fill="none" {...OUTLINE} />
 
@@ -877,6 +950,76 @@ function CatArt({
             </g>
           )}
 
+          {/* ---- the jokes ---- */}
+
+          {gag === 'achoo' && (
+            <g>
+              <g className="gag-spray" fill="#BFE3D0" opacity="0.9">
+                <circle cx="150" cy="128" r="7" />
+                <circle cx="170" cy="116" r="5" />
+                <circle cx="168" cy="140" r="4.5" />
+                <circle cx="190" cy="128" r="4" />
+                <circle cx="200" cy="112" r="3" />
+                <circle cx="196" cy="144" r="3" />
+              </g>
+              {/* the piece of sushi he was about to eat, blown clean across the room */}
+              <g className="gag-fly">
+                <g transform="translate(136 118)">
+                  <rect x="-16" y="-2" width="32" height="15" rx="7" fill="#FFF8EC" stroke={LINE} strokeWidth="2.4" />
+                  <path d="M -17 0 Q -13 -10 0 -10 Q 13 -10 17 0 Q 0 -4 -17 0 Z" fill="#FF8A65" stroke={LINE} strokeWidth="2.4" strokeLinejoin="round" />
+                  <path d="M -8 -6 l 3 3 M 0 -8 l 3 3.5 M 7 -7 l 3 3" stroke="#FFF8EC" strokeWidth="1.6" strokeLinecap="round" />
+                  <rect x="-3" y="-4" width="6" height="17" rx="1.5" fill={INK} />
+                </g>
+              </g>
+            </g>
+          )}
+
+          {gag === 'wasabi' && (
+            <g>
+              {/* the lump of wasabi, just before it goes in */}
+              <g className="gag-wasabi-blob" style={{ transformOrigin: '120px 128px' }}>
+                <path
+                  d="M 108 132 q -2 -10 6 -12 q 2 -8 10 -4 q 8 -3 9 6 q 6 4 0 10 Z"
+                  fill="#8BC34A"
+                  stroke="#4E7A27"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </g>
+              {/* steam out of both ears, puff after puff */}
+              {[
+                [64, 26, ''],
+                [176, 26, ''],
+                [64, 26, 'gag-steam-2'],
+                [176, 26, 'gag-steam-2'],
+                [64, 26, 'gag-steam-3'],
+                [176, 26, 'gag-steam-3'],
+              ].map(([x, y, extra], i) => (
+                <g
+                  key={i}
+                  className={`gag-steam ${x === 64 ? 'gag-steam-l' : 'gag-steam-r'} ${extra}`}
+                  style={{ transformOrigin: `${x}px ${y}px` }}
+                  fill="#FFFFFF"
+                  opacity="0"
+                >
+                  <circle cx={x as number} cy={y as number} r="10" />
+                  <circle cx={(x as number) + 8} cy={(y as number) - 6} r="8" />
+                  <circle cx={(x as number) - 7} cy={(y as number) - 5} r="7" />
+                </g>
+              ))}
+              {/* and the tears */}
+              <path className="cat-drop" d="M 72 112 q 6 9 0 13 q -6 -4 0 -13 Z" fill="#8FD3F4" />
+              <path className="cat-drop" d="M 168 112 q 6 9 0 13 q -6 -4 0 -13 Z" fill="#8FD3F4" />
+            </g>
+          )}
+
+          {gag === 'yawn' && (
+            <g fill="#BFE3D0" fontWeight="800" fontFamily="ui-rounded, system-ui">
+              <text className="cat-zzz" x="186" y="56" fontSize="24">z</text>
+              <text className="cat-zzz cat-zzz-2" x="206" y="36" fontSize="18">z</text>
+            </g>
+          )}
+
           {rx === 'float' && (
             <g className="cat-sparkle" fill="#F7C744" opacity="0.9">
               <path d="M 70 176 l 4 9 l 9 4 l -9 4 l -4 9 l -4 -9 l -9 -4 l 9 -4 Z" />
@@ -885,6 +1028,31 @@ function CatArt({
           )}
         </g>
       </g>
+
+      {/* Not inside the falling body, so it stays upright, in the space he has just fallen out of. */}
+      {gag === 'splat' && (
+        <g className="gag-splat-burst" style={{ transformOrigin: '96px 70px' }}>
+          <path
+            d="M 96 24 l 10 22 l 24 -10 l -8 24 l 24 8 l -24 10 l 10 24 l -24 -8 l -12 22 l -10 -22 l -24 10 l 8 -24 l -24 -10 l 24 -8 l -8 -24 l 24 10 Z"
+            fill="#F7C744"
+            stroke={LINE}
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+          <text
+            x="96"
+            y="78"
+            textAnchor="middle"
+            fontSize="22"
+            fontWeight="900"
+            fill="#E4574F"
+            fontFamily="ui-rounded, system-ui"
+            transform="rotate(-8 96 70)"
+          >
+            SPLAT!
+          </text>
+        </g>
+      )}
     </svg>
   );
 }

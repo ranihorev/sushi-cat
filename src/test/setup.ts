@@ -1,5 +1,6 @@
 import { afterEach, beforeEach } from 'vitest';
 import { installAudioStub, resetAudioStub } from './audio-stub';
+import { surprises } from '../game/surprises';
 
 installAudioStub();
 
@@ -49,6 +50,8 @@ if (!('requestIdleCallback' in window)) {
 beforeEach(() => {
   resetAudioStub();
   localStorage.clear();
+  // the jokes come at random; a test that wants one turns them back on
+  surprises.reset({ off: true });
 });
 
 afterEach(() => {

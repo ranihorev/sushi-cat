@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { PettableCat } from '../components/PettableCat';
 import { Picture } from '../components/Picture';
 import { Counter, Restaurant } from '../components/Restaurant';
@@ -7,6 +7,7 @@ import { audio, catSound } from '../game/audio';
 import { giftById, toggleWear, wornBy } from '../game/gifts';
 import type { GameMode, Profile } from '../game/types';
 import { rollShopOpen } from '../game/words';
+import { surprises, type DoorGuest } from '../game/surprises';
 
 interface Props {
   profile: Profile;
@@ -109,18 +110,108 @@ const DOORS: DoorDef[] = [
   },
 ];
 
+/* ------------------------- who peeks out of a door -------------------------
+   Now and then, a moment after he arrives on the street, someone pops up in
+   one door's window: a fish in sunglasses, or an octopus having a dance. They
+   stay a few seconds and go. Tap them and they do it again; tap the rest of
+   the door and it opens as usual. */
+
+const GUEST_IN_MS = 1400;
+const GUEST_STAY_MS = 5200;
+
+function Fish() {
+  return (
+    <g className="guest-fish">
+      {/* tail */}
+      <path d="M 112 118 L 136 100 Q 130 118 136 136 Z" fill="#FF8A65" stroke={INK} strokeWidth="3.5" strokeLinejoin="round" />
+      {/* body */}
+      <ellipse cx="80" cy="118" rx="36" ry="24" fill="#FFB347" stroke={INK} strokeWidth="3.5" />
+      <path d="M 92 100 q 8 12 0 36" fill="none" stroke="#FF8A65" strokeWidth="4" strokeLinecap="round" />
+      <path d="M 74 96 q 8 -12 20 -2" fill="#FF8A65" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+      {/* the sunglasses, very cool */}
+      <g className="guest-shades">
+        <path d="M 46 108 h 40" stroke={INK} strokeWidth="3.5" strokeLinecap="round" />
+        <path d="M 48 107 h 16 q 0 12 -8 12 q -8 0 -8 -12 Z" fill={INK} />
+        <path d="M 68 107 h 16 q 0 12 -8 12 q -8 0 -8 -12 Z" fill={INK} />
+        <path d="M 52 110 l 4 -2 M 72 110 l 4 -2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+      </g>
+      {/* a grin */}
+      <path d="M 50 128 q 8 8 18 2" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+      {/* and the sparkle off the lenses */}
+      <path className="guest-glint" d="M 92 92 l 3 7 l 7 3 l -7 3 l -3 7 l -3 -7 l -7 -3 l 7 -3 Z" fill="#F7C744" />
+    </g>
+  );
+}
+
+function Octopus() {
+  return (
+    <g className="guest-octo" style={{ transformOrigin: '80px 150px' }}>
+      {/* six legs, each waving on its own beat */}
+      {[46, 60, 74, 86, 100, 114].map((x, i) => (
+        <path
+          key={x}
+          className={`guest-leg guest-leg-${i % 3}`}
+          style={{ transformOrigin: `${x}px 128px` }}
+          d={`M ${x} 126 q ${i % 2 ? 8 : -8} 14 0 26 q ${i % 2 ? -6 : 6} 6 ${i % 2 ? 4 : -4} 10`}
+          fill="none"
+          stroke="#B07BE0"
+          strokeWidth="9"
+          strokeLinecap="round"
+        />
+      ))}
+      <ellipse cx="80" cy="108" rx="34" ry="28" fill="#C08EF0" stroke={INK} strokeWidth="3.5" />
+      <circle cx="68" cy="106" r="6" fill={INK} />
+      <circle cx="92" cy="106" r="6" fill={INK} />
+      <circle cx="70" cy="104" r="2" fill="#fff" />
+      <circle cx="94" cy="104" r="2" fill="#fff" />
+      <path d="M 70 118 q 10 10 20 0" fill="#7A2E33" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+      <ellipse cx="58" cy="116" rx="5" ry="3" fill="#FF9EAA" />
+      <ellipse cx="102" cy="116" rx="5" ry="3" fill="#FF9EAA" />
+      {/* a little party hat */}
+      <path d="M 72 82 L 82 56 L 92 82 Z" fill="#F7C744" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+      <circle cx="82" cy="55" r="4" fill="#E4574F" />
+    </g>
+  );
+}
+
+function Guest({ who, clipId }: { who: DoorGuest; clipId: string }) {
+  const [n, setN] = useState(0);
+  return (
+    <g
+      data-guest={who}
+      clipPath={`url(#${clipId})`}
+      onPointerDown={(e) => {
+        // a tap on the guest is for the guest; it does not open the door
+        e.stopPropagation();
+        audio.unlock();
+        if (who === 'fish') audio.cool();
+        else audio.octoDance();
+        setN((v) => v + 1);
+      }}
+    >
+      <circle cx="80" cy="114" r="44" fill="#BFE3F4" />
+      <g key={n} className="guest-pop" style={{ transformOrigin: '80px 160px' }}>
+        {who === 'fish' ? <Fish /> : <Octopus />}
+      </g>
+    </g>
+  );
+}
+
 function Door({
   def,
   index,
   locked,
+  guest,
   onOpen,
 }: {
   def: DoorDef;
   index: number;
   locked: boolean;
+  guest?: DoorGuest | null;
   onOpen: () => void;
 }) {
   const [shake, setShake] = useState(0);
+  const clipId = `window-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <button
       type="button"
@@ -137,7 +228,16 @@ function Door({
       className={`door ${locked ? 'door-locked' : ''}`}
       style={{ animationDelay: `${index * 90}ms` }}
     >
-      <svg viewBox="0 0 160 200" className={`h-full w-full overflow-visible ${shake ? 'door-shake' : ''}`} key={shake}>
+      <svg
+        viewBox="0 0 160 200"
+        className={`h-full w-full overflow-visible ${shake ? 'door-shake' : ''} ${guest ? 'door-knock' : ''}`}
+        key={shake}
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <circle cx="80" cy="114" r="44" />
+          </clipPath>
+        </defs>
         <ellipse cx="80" cy="192" rx="70" ry="8" fill="rgba(0,0,0,0.25)" />
         <g className="door-front">
           {/* the door: an arch, the colour of its shop */}
@@ -145,7 +245,7 @@ function Door({
           <path d="M 30 190 V 82 A 50 50 0 0 1 130 82 V 190" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="4" />
           {/* its window, with the game in it */}
           <circle cx="80" cy="114" r="46" fill="#FFFBF2" stroke={INK} strokeWidth="5" />
-          <g className="door-sign">{def.scene}</g>
+          {guest ? <Guest who={guest} clipId={clipId} /> : <g className="door-sign">{def.scene}</g>}
           {/* the handle and the step */}
           <circle cx="130" cy="172" r="6" fill={def.trim} stroke={INK} strokeWidth="4" />
           <rect x="8" y="184" width="144" height="12" rx="6" fill={def.trim} stroke={INK} strokeWidth="4" />
@@ -174,6 +274,28 @@ export function Title({ profile, onStart, onParent, onProfileChange }: Props) {
   const rollsOpen = rollShopOpen(profile);
   /** which toy is in the middle of its trick, and a count to restart it */
   const [toy, setToy] = useState<{ id: string; n: number } | null>(null);
+  /* Now and then someone peeks out of a door: decided once per visit to the
+     street, then shown a moment after he arrives, for a few seconds. */
+  const [visit] = useState(() => {
+    const who = profile.settings.surprises !== false ? surprises.door() : null;
+    // only a door he can open: the shut roll shop keeps its padlock
+    const open = DOORS.flatMap((d, i) => (d.mode !== 'rolls' || rollsOpen ? [i] : []));
+    return who ? { who, door: open[Math.floor(Math.random() * open.length)] } : null;
+  });
+  const [guestShown, setGuestShown] = useState(false);
+  useEffect(() => {
+    if (!visit) return;
+    const show = window.setTimeout(() => {
+      setGuestShown(true);
+      audio.peek();
+      window.setTimeout(() => (visit.who === 'fish' ? audio.cool() : audio.octoDance()), 450);
+    }, GUEST_IN_MS);
+    const hide = window.setTimeout(() => setGuestShown(false), GUEST_IN_MS + GUEST_STAY_MS);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, [visit]);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
@@ -187,6 +309,7 @@ export function Title({ profile, onStart, onParent, onProfileChange }: Props) {
             fullness={0.15}
             mood="idle"
             wear={wear}
+            jokes={profile.settings.surprises !== false}
             className="min-h-0 h-[clamp(96px,25vh,290px)] w-[clamp(120px,30vh,348px)] shrink"
           />
 
@@ -217,6 +340,7 @@ export function Title({ profile, onStart, onParent, onProfileChange }: Props) {
                 def={d}
                 index={i}
                 locked={d.mode === 'rolls' && !rollsOpen}
+                guest={guestShown && visit?.door === i ? visit.who : null}
                 onOpen={() => onStart(d.mode)}
               />
             ))}
